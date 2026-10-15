@@ -640,6 +640,10 @@ html.big body{zoom:1.18;}
   Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(a){ a.addEventListener("click", function(e){ e.preventDefault(); var on = document.querySelector(".view.on"); proFrom = on ? on.id.slice(2) : null; show(a.dataset.go); }); });
 
   // ── 데이터베이스(.db) — nadb.js (SQLite · 이 기기 안에서만)
+  if(!window.NADB){   // nadb.js 를 못 받았어도 앱 시작은 막히지 않게, 쓰는 순간 실패로 처리되는 빈 틀을 둔다 (PR #8 Codex P2)
+    var nope = function(){ return Promise.reject(new Error("nadb")); };
+    window.NADB = { source:null, invalidate:function(){}, bind:nope, table:nope, exportBytes:nope, readFile:nope };
+  }
   NADB.source = function(){ return st.logs; };
   function dbBind(){ var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
   $("db_view").onclick = function(){
