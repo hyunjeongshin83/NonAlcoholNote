@@ -51,3 +51,10 @@
 - `cups`: 마신 기록의 **종류별 단위 수**(소주·와인·막걸리·양주는 잔, 맥주는 캔). 서로 다른 종류의 `cups` 는 더하지 않고 순수 알코올 g 로 합친다.
 - `bev`: 술 종류(없으면 예전 기록 → 합계에서 「이상/모름」으로 따로 센다).
 - `cr`: 갈망 0~10 정수 또는 null(예전 기록·5분 버티기 완료 기록은 점수를 지어내지 않고 null). `lv`: 예전 3단계(없는 `cr` 이면 이것이 유일한 세기 값 — CSV 의 「세기(예전 3단계)」 열).
+
+## 데이터베이스(.db) (2026-10-15 · 대표님 요청)
+- `nadb.js` + `vendor/sql-wasm.*` (sql.js 1.12.0 · MIT) — 기록으로 SQLite 데이터베이스를 만들어 읽고 쓴다. 기록의 원본은 그대로 localStorage(`nonalcohol.v1`)이고, `.db` 는 저장할 때마다 낡음 표시(`invalidate`)가 되어 필요할 때 다시 만들어진다. 서버로 가지 않는다.
+- 표: `meta(k,v)` · `logs(id,t,kind,cups,bev,cr,lv,mood)` · `log_items(log_id,field,pos,value)` (목록 필드 trig·cope 를 한 줄씩 — Room 의 1:N 과 같은 모양) · 뷰 `logs_flat` (목록 필드를 「 / 」로 이어 붙임). `PRAGMA user_version = 1`.
+- 읽기: `NADB.query(sql)`(SELECT 만) · `NADB.table(el, sql)` · HTML 에서 `<b data-db="SELECT COUNT(*) || '건' FROM logs">` / `<ul data-db-list="SELECT …">` — 값은 글자로만 넣는다.
+- 쓰기: `.db` 내보내기 / 가져오기(합치기). 가져온 파일은 `meta.app = 'nonalcohol'` 확인 뒤 정해진 칸만 SELECT 하고 `cleanLog` + 선택지 허용 목록으로 걸러 넣는다 (최대 20MB · 5000건).
+- 앱 셸(`window.Native`)에는 파일 내려받기·선택기가 없어 내보내기·가져오기 단추를 숨긴다.
