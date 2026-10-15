@@ -219,7 +219,7 @@ html.big body{zoom:1.18;}
       <div class="title">알코올 줄이기</div>
       <p class="sub">마시고 싶은 순간을 적고, 넘긴 방법을 모아, 약사·상담자와 함께 볼 수 있는 금주·절주 기록장이에요.</p>
       <div class="tipcard on" style="margin-top:14px"><div class="t">먼저 알아 두세요</div><div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div></div>
-      <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭에서 파일로 내보내 약사·상담자와 함께 봐요.</span></div></li></ol>
+      <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭의 「약사·상담자와 함께 보기」로 요약을 함께 봐요.</span></div></li></ol>
       <button class="btn" id="st_go" style="margin-top:6px">시작하기</button>
       <a class="btn ghost" href="#pro" data-go="pro" style="margin-top:9px;text-decoration:none;justify-content:center">약사·상담자와 함께 보기</a>
     </div>
@@ -656,6 +656,7 @@ html.big body{zoom:1.18;}
   $("db_in").onclick = function(){ $("db_file").click(); };
   $("db_file").onchange = function(){
     var f = $("db_file").files[0]; if(!f) return;
+    if(f.size > 20*1024*1024){ $("db_file").value = ""; toast("파일이 너무 커요 (20MB까지)"); return; }   // 읽어 들이기 전에 크기부터 (PR #8 Codex P2)
     var rd = new FileReader();
     rd.onload = function(){
       NADB.readFile(new Uint8Array(rd.result)).then(function(rows){

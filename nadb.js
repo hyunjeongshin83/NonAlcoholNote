@@ -18,12 +18,14 @@
 
   function lib(){
     if(libP) return libP;
-    libP = new Promise(function(res, rej){
+    // 스크립트는 한 번만 싣고, 초기화(.wasm 내려받기)가 실패하면 다음에 다시 시도할 수 있게 캐시를 비운다 (PR #8 Codex P2)
+    var script = window.initSqlJs ? Promise.resolve() : new Promise(function(res, rej){
       var s = document.createElement("script"); s.src = "vendor/sql-wasm.js";
-      s.onload = function(){ window.initSqlJs({ locateFile: function(f){ return "vendor/" + f; } }).then(res, rej); };
-      s.onerror = function(){ libP = null; rej(new Error("lib")); };
+      s.onload = res; s.onerror = function(){ s.remove(); rej(new Error("lib")); };
       document.head.appendChild(s);
     });
+    libP = script.then(function(){ return window.initSqlJs({ locateFile: function(f){ return "vendor/" + f; } }); });
+    libP.catch(function(){ libP = null; });
     return libP;
   }
   function isSelect(sql){ return /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql); }
