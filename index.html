@@ -428,6 +428,103 @@ html.big body{zoom:1.18;}
   var COPE = ["물·차 마시기", "심호흡", "산책", "연락하기", "자리 피하기", "간식 먹기"];
   var TIPS = ["찬물이나 차를 천천히 한 잔 마셔 보세요.", "코로 4초 들이쉬고 6초 내쉬기를 다섯 번 해 보세요.", "자리에서 일어나 5분만 걸어 보세요.", "믿는 사람에게 문자 한 줄을 보내 보세요.", "지금 술이 눈에 보이는 곳이라면 다른 곳으로 옮기세요.", "당기는 마음은 파도처럼 올랐다 가라앉아요. 지켜보기만 해도 돼요."];
   var st = load();
+  // ── 여러 탭 · 기기 안 저장 합치기 — 다른 탭이 방금 저장한 기록을 낡은 상태로 덮어쓰지 않는다 (3-way 합침: 마지막으로 본 저장본 · 내 상태 · 지금 저장된 것)
+  delete st._rev; delete st._prev;   // 저장본에 붙는 쓰기 표식(아래)은 상태에는 두지 않는다
+  var lastRev = "0", snaps = {};     // lastRev: 내가 마지막으로 쓰거나 받아들인 저장본의 표식 · snaps: 최근 저장본 몇 개(동시에 쓴 탭과 합칠 때 공통 출발점으로 씀)
+  try{ lastRev = (JSON.parse(bootRaw) || {})._rev || "0"; }catch(e){}
+  var lastRaw = bootRaw, lastObj = null;   // lastRaw 는 load() 가 읽은 바로 그 값(시작 직전 다른 탭이 쓴 것을 놓치지 않게) · lastObj: 시작을 마친 뒤의 상태에서 채운다
+  function noLists(x){   // 목록은 비우고 값은 그대로 둔 사본 — 내가 건드리지 않은 값은 들어온 저장의 새 값을 받아들이게 하는 출발점
+    if(Array.isArray(x)) return [];
+    if(x && typeof x === "object"){ var o = {}; Object.keys(x).forEach(function(k){ o[k] = noLists(x[k]); }); return o; }
+    return x;
+  }
+  function revTime(r){ return parseInt(String(r).slice(0, 8), 36) || 0; }   // 표식 앞 8글자는 쓴 시각(Date.now 36진수)
+  function isObj(x){ return !!x && typeof x === "object" && !Array.isArray(x); }
+  function jeq(a, b){ return JSON.stringify(a) === JSON.stringify(b); }
+  function canon(x){   // 속성 순서와 상관없이 같은 내용이면 같은 글자열
+    if(Array.isArray(x)) return "[" + x.map(canon).join(",") + "]";
+    if(x && typeof x === "object") return "{" + Object.keys(x).sort().map(function(k){ return JSON.stringify(k) + ":" + canon(x[k]); }).join(",") + "}";
+    return JSON.stringify(x);
+  }
+  function itemKey(x){   // 같은 기록이면 같은 열쇠, 다른 기록이면 (같은 시각이어도) 다른 열쇠
+    if(!x || typeof x !== "object") return "p" + JSON.stringify(x);
+    if(x.id != null) return "i" + x.id;
+    if(x.t == null && typeof x.start === "number" && typeof x.end === "number") return "a" + x.start;   // 시도 기록: 같은 시작이면 같은 시도(두 탭이 같이 다시 시작해도 한 번만)
+    if(x.t != null){
+      var c = cleanLog(x) || x;   // 불러올 때 다듬어진 꼴과 같은 열쇠가 되게 (속성 순서·빠진 칸이 달라도 같은 기록)
+      return "t" + c.t + "|" + (c.kind || "") + "|" + canon(c);
+    }
+    return "j" + canon(x);
+  }
+  function merge3(b, m, t, name){
+    if(jeq(m, b)) return t;      // 내가 안 바꿨으면 지금 저장된 것을 따른다
+    if(jeq(t, b)) return m;      // 다른 탭이 안 바꿨으면 내 것
+    if(b === undefined && Array.isArray(m) && Array.isArray(t)) b = [];
+    if(b === undefined && isObj(m) && isObj(t)) b = {};   // 기준본에 없던 묶음(예: 복용 기록 지도)도 빈 묶음에서 출발한 것으로 합쳐 서로의 항목을 지키지 않고 잃지 않게 한다   // 기준본에 없던 목록(예: 처음 만든 알림 장부)을 두 탭이 따로 만들었으면 빈 목록에서 출발한 것으로 합친다
+    if(Array.isArray(m) && Array.isArray(t) && Array.isArray(b)){
+      var bm = {}, mm = {}, tm = {}, out = [];
+      b.forEach(function(x){ bm[itemKey(x)] = x; }); m.forEach(function(x){ mm[itemKey(x)] = x; }); t.forEach(function(x){ tm[itemKey(x)] = x; });
+      t.forEach(function(x){ var k = itemKey(x); if(k in bm && !(k in mm)) return; out.push(k in mm && !jeq(mm[k], bm[k]) ? mm[k] : x); });   // 내가 지운 것은 빼고, 내가 고친 것은 내 것
+      m.forEach(function(x){ var k = itemKey(x); if(!(k in tm) && !(k in bm)) out.push(x); });   // 내가 새로 넣은 것
+      var ts = out.every(function(x){ return x && typeof x.t === "number"; });
+      if(ts && out.length > 1){
+        var desc = name !== "log";   // 기본은 최신이 앞(맨 위) — 알림 장부(log)만 오래된 것이 앞
+        [m, t, b].some(function(a){ if(a.length > 1 && typeof a[0].t === "number" && typeof a[a.length - 1].t === "number" && a[0].t !== a[a.length - 1].t){ desc = a[0].t > a[a.length - 1].t; return true; } return false; });   // 기록이 2개 이상 든 쪽의 순서를 따른다
+        out.sort(function(p, q){ return desc ? q.t - p.t : p.t - q.t; });
+      }
+      if(name === "media") out = out.slice(0, 200);   // 사진 기록 한도 200건
+      return out;
+    }
+    if(m && t && b && typeof m === "object" && typeof t === "object" && typeof b === "object" && !Array.isArray(m) && !Array.isArray(t) && !Array.isArray(b)){
+      var o = {}, keys = {}; [b, m, t].forEach(function(x){ Object.keys(x).forEach(function(k){ keys[k] = 1; }); });
+      Object.keys(keys).forEach(function(k){ var v = merge3(b[k], m[k], t[k], k); if(v !== undefined) o[k] = v; });
+      return o;
+    }
+    return m;
+  }
+  function relink(o, n){   // 바뀌지 않은 기록은 원래 객체를 그대로 쓴다 (열려 있는 화면이 쥔 기록 참조가 끊기지 않게)
+    if(jeq(o, n)) return o;
+    if(Array.isArray(o) && Array.isArray(n)){
+      var om = {}; o.forEach(function(x){ om[itemKey(x)] = x; });
+      return n.map(function(x){ var k = itemKey(x); return k in om ? relink(om[k], x) : x; });
+    }
+    if(o && n && typeof o === "object" && typeof n === "object" && !Array.isArray(o) && !Array.isArray(n)){ Object.keys(n).forEach(function(k){ n[k] = relink(o[k], n[k]); }); }
+    return n;
+  }
+  function adopt(merged){ Object.keys(st).forEach(function(k){ delete st[k]; }); Object.keys(merged).forEach(function(k){ st[k] = merged[k]; }); }
+  function newRev(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function remember(rev, obj){ if(("r" + rev) in snaps) return; snaps["r" + rev] = JSON.parse(JSON.stringify(obj)); var ks = Object.keys(snaps); if(ks.length > 6) delete snaps[ks[0]]; }
+  function pullOthers(inSave){   // 다른 탭이 저장한 것이 있으면 내 상태에 합친다. 합쳤으면 true
+    var raw; try{ raw = localStorage.getItem(KEY); }catch(e){ return false; }
+    if(lastObj === null || raw === lastRaw || raw == null) return false;
+    var full; try{ full = JSON.parse(raw); }catch(e){ return false; }
+    if(!full || typeof full !== "object") return false;
+    var rev = full._rev || "0", prev = full._prev || "0", theirs = {};
+    Object.keys(full).forEach(function(k){ if(k !== "_rev" && k !== "_prev") theirs[k] = full[k]; });
+    // 그 저장이 내가 마지막으로 쓰거나 받아들인 저장본 위에서 이뤄진 게 아니면, 두 탭이 동시에 쓴 것이다 → 둘의 공통 출발점(그 저장의 앞 저장본)에서 다시 합친다
+    var concurrent = rev !== lastRev && prev !== lastRev, base = (concurrent && snaps["r" + prev]) ? snaps["r" + prev] : lastObj;
+    if(concurrent && !snaps["r" + prev]) base = revTime(rev) >= revTime(lastRev) ? noLists(lastObj) : {};   // 그 저장의 앞 저장본을 못 봤다면: 더 새 저장이면(건너뛴 저장이 있을 뿐) 내가 안 건드린 값은 새 값을 받고 목록은 합집합, 더 오래된 저장이면(오래 멈춘 탭) 값은 내 쪽(최신)을 지킨다
+    if(full._rev && ("r" + rev) in snaps){ base = snaps["r" + rev]; concurrent = true; }   // 옛 탭이 받은 표식을 그대로 두고 내용을 바꿔 다시 쓴 것 — 그 표식의 원래 저장본이 공통 출발점이다
+    if(!full._rev){ base = {}; concurrent = true; }   // 표식 없는 옛 탭이 낡은 상태로 쓴 저장 — 공통 출발점을 알 수 없으니 목록은 합집합으로 합치고, 설정 같은 값은 내 쪽(최신)을 지킨 뒤 다시 저장한다
+    var old = {}; Object.keys(st).forEach(function(k){ old[k] = st[k]; });
+    var merged = relink(old, merge3(base, st, theirs));
+    var lost = concurrent && !jeq(merged, theirs);   // 저장된 것에 내 변경이 빠져 있다 = 동시에 써서 내 쪽이 덮였다
+    adopt(merged); var bl = blank(); Object.keys(bl).forEach(function(k){ if(st[k] === undefined) st[k] = bl[k]; });   // 합친 결과에도 기본값을 채워 둔다
+    lastRaw = raw; lastRev = rev; lastObj = JSON.parse(JSON.stringify(theirs)); remember(rev, theirs);
+    if(lost && !inSave) setTimeout(function(){ save(); }, 0);   // 합친 결과를 다시 저장해 두 탭이 같은 기록으로 모이게 한다
+    return true;
+  }
+  function save(){
+    var pr = lastRaw, po = lastObj, pv = lastRev;
+    try{
+      if(lastObj !== null && lastRaw != null && localStorage.getItem(KEY) == null){ location.reload(); return false; }   // 다른 탭이 기록을 지웠다면 낡은 기록을 다시 쓰지 않고 새로 연다
+      if(pullOthers(true)) setTimeout(afterPull, 0);   // 저장하며 다른 탭 기록을 합쳤으면 열린 화면도 새로 그린다
+      var rev = newRev(), out = {}; Object.keys(st).forEach(function(k){ out[k] = st[k]; }); out._rev = rev; out._prev = lastRev;
+      var s = JSON.stringify(out); localStorage.setItem(KEY, s); lastRaw = s; lastRev = rev; if(lastObj !== null){ lastObj = JSON.parse(JSON.stringify(st)); remember(rev, st); }
+      if(window.NADB) NADB.invalidate(); return true;
+    }catch(e){ lastRaw = pr; lastObj = po; lastRev = pv; toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; }   // 쓰기가 실패하면 기준본을 되돌려, 다음 저장이 다른 탭 기록을 다시 합치게 한다
+  }
+  function baseline(){ lastObj = JSON.parse(JSON.stringify(st)); remember(lastRev, st); }
 
   // 가져온 파일·옛 저장값은 믿지 않고 칸마다 모양을 맞춘다 (화면에 HTML 로 들어가는 값이 글자·숫자뿐이도록)
   function cleanStr(v, max){ return typeof v === "string" ? v.slice(0, max) : ""; }
@@ -440,16 +537,16 @@ html.big body{zoom:1.18;}
   }
   function cleanAttempts(a){ return Array.isArray(a) ? a.filter(function(x){ return x && typeof x.start === "number" && typeof x.end === "number"; }).slice(0, 200).map(function(x){ return {start:x.start, end:x.end}; }) : []; }
   function blank(){ return {v:1, goal:null, start:null, freq:3, price:30000, reason:"", logs:[], attempts:[], big:false}; }
+  var bootRaw = null;
   function load(){
     try{
-      var raw = localStorage.getItem(KEY); if(!raw) return blank();
+      var raw = localStorage.getItem(KEY); bootRaw = raw; if(!raw) return blank();
       var o = JSON.parse(raw); var b = blank();
       Object.keys(b).forEach(function(k){ if(o[k] === undefined) o[k] = b[k]; });
       o.logs = (Array.isArray(o.logs) ? o.logs : []).map(cleanLog).filter(Boolean); o.attempts = cleanAttempts(o.attempts);
       return o;
     }catch(e){ return blank(); }
   }
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); if(window.NADB) NADB.invalidate(); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
 
   // ── 토스트 (금연노트와 같은 6초 · 마우스가 위에 있으면 유지)
   var mouseX = -1, mouseY = -1;
@@ -668,6 +765,7 @@ html.big body{zoom:1.18;}
   var dbTok = 0;
   function dbBind(){ dbTok++; var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
   function dbShow(lim){
+    dbLast = lim;
     var box = $("db_table"), tok = ++dbTok, tmp = document.createElement("div"); box.textContent = "불러오는 중…";   // 떼어 둔 요소에 먼저 그린 뒤, 아직 가장 나중 요청일 때만 화면에 옮긴다   // 가장 나중 요청만 화면에 그린다 (PR #8 Codex)
     NADB.table(tmp, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + lim)
       .then(function(){
@@ -707,11 +805,19 @@ html.big body{zoom:1.18;}
   // 다른 탭이 저장하면 이 탭의 기록도 새로 읽어 와서, 낡은 기록으로 .db 를 만들거나 덮어쓰지 않게 한다 (PR #8 Sourcery)
   window.addEventListener("storage", function(e){
     if(e.key !== KEY || !e.newValue) return;
-    st = load(); NADB.invalidate(); renderLogs();
-    if($("v-stats").classList.contains("on")) renderStats();
-    if($("v-help").classList.contains("on")) dbBind();
-    refreshHome();
+    if(pullOthers()) afterPull();
   });
+  var dbLast = 100;
+  function afterPull(){   // 다른 탭의 변경을 합친 뒤, 열려 있는 화면을 모두 새로 그린다
+    NADB.invalidate(); renderLogs(); document.documentElement.classList.toggle("big", !!st.big); if($("p_big")) $("p_big").checked = !!st.big;   // 다른 탭에서 바꾼 큰 글씨 설정도 바로 적용 (도움말의 체크 상자까지)
+    var on = document.querySelector(".view.on"), v = on ? on.id.slice(2) : "";
+    if(!st.start && v !== "start" && v !== "setup"){ show("start"); return; }   // 다른 탭에서 목표를 다시 정했으면 이 탭도 시작 화면으로
+    if(v === "stats") renderStats();
+    if(v === "pro") renderPro();
+    if(v === "help"){ var tableOpen = $("db_table").childNodes.length > 0; dbBind(); if(tableOpen) dbShow(dbLast); }   // 열려 있던 표인지 먼저 확인한 뒤 카드를 다시 묶는다
+    if(v === "setup" && st.start){ show("home"); toast("다른 탭에서 이미 시작했어요"); }   // 설정 화면은 시작 전에만 열린다 — 다른 탭에서 시작했으면 낡은 설정 화면을 떠나 홈으로 (저장하면 진행 중인 목표를 덮어쓰게 되므로)
+    refreshHome();
+  }
   if(window.Native) $("db_files").style.display = "none";   // 앱 셸에는 파일 내려받기·선택기가 아직 없다
 
 
@@ -812,6 +918,8 @@ html.big body{zoom:1.18;}
   };
 
   // ── 시작
+  baseline();
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden && pullOthers()) afterPull(); });   // 탭으로 돌아오면 한 번 확인
   if(!st.start){ show("start"); }
   else {
     var q = new URLSearchParams(location.search), tab = q.get("tab");
