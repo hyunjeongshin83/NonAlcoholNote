@@ -709,6 +709,7 @@ html.big body{zoom:1.18;}
     st = load(); NADB.invalidate(); renderLogs();
     if($("v-stats").classList.contains("on")) renderStats();
     if($("v-help").classList.contains("on")) dbBind();
+    refreshHome();
   });
   if(window.Native) $("db_files").style.display = "none";   // 앱 셸에는 파일 내려받기·선택기가 아직 없다
 
@@ -719,6 +720,7 @@ html.big body{zoom:1.18;}
     if(l.kind === "drink"){ var bv = bevOf(l.bev); return "마셨어요" + (bv ? " · " + bv.k + " " + l.cups + bv.u + " · 약 " + gramsOf(bv.k, l.cups) + "g" : "") + cr; }
     return "넘겼어요" + cr;
   }
+  function refreshHome(){ if($("v-home").classList.contains("on")) renderMain(); }   // 메인이 열려 있는 채로 기록이 바뀌면 그 자리에서 다시 그린다
   function renderMain(){
     var logs = Array.isArray(st.logs) ? st.logs : [], today = dayKey(Date.now());
     var done = logs.some(function(l){ return dayKey(l.t) === today; });
@@ -736,7 +738,7 @@ html.big body{zoom:1.18;}
     });
   }
   $("td_go").onclick = function(){ show("log"); };
-  Array.prototype.forEach.call(document.querySelectorAll("[data-q]"), function(b){ b.onclick = function(){ show(b.dataset.q); }; });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-q]"), function(b){ b.onclick = function(){ var on = document.querySelector(".view.on"); proFrom = on ? on.id.slice(2) : null; show(b.dataset.q); }; });   // 「함께 보기」의 뒤로 단추가 메인으로 돌아오게
 
   // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
   var sosTimer = null, sosOpener = null, sosStep = null;
@@ -762,7 +764,7 @@ html.big body{zoom:1.18;}
   $("sos_close").onclick = closeSos;
   $("sos_done").onclick = function(){
     closeSos();
-    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); if(save()) toast("멋져요! 기록에 남겼어요");
+    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); if(save()){ toast("멋져요! 기록에 남겼어요"); refreshHome(); }
   };
   document.addEventListener("keydown", function(e){
     if(!$("sos").classList.contains("on")) return;
