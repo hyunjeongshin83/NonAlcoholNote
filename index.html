@@ -570,13 +570,14 @@ html.big body{zoom:1.18;}
     var logs = st.logs, urge = logs.filter(function(l){ return l.kind !== "drink"; }), drunk = logs.filter(function(l){ return l.kind === "drink"; });
     var from = logs.length ? dayStart(Math.min.apply(null, logs.map(function(l){ return l.t; }))) : null;   // 기간은 요약에 들어가는 기록의 날짜로만
     var sumFrom = st.start ? dayStart(trackStart()) : from;
-    var days = from == null ? 0 : Math.max(0, Math.round((dayStart(Date.now()) - from) / 864e5)) + 1;
+    var lastLog = logs.length ? dayStart(Math.max.apply(null, logs.map(function(l){ return l.t; }))) : null;   // 기간은 요약 기록의 첫날~마지막 날 (오늘이 아니라) — 날마다 늘어나지 않게
+    var days = from == null ? 0 : Math.max(0, Math.round((lastLog - from) / 864e5)) + 1;
     var dry = sumFrom == null ? 0 : dryDays(sumFrom, Date.now());
     var denom = urge.length + drunk.length;
     var held = denom ? Math.round(urge.length / denom * 100) + "%" : "—";
     var urgeN = denom;   // 마신 기록도 당김 세기를 적으므로 「마시고 싶었던 순간」에 함께 센다 (PR #5 Codex P2)
     function trigOf(l){ return okList(l.trig, TRIG); }
-    function rows(){ return logs.map(function(l){ return {t:l.t, kind:(l.kind === "drink" ? "마심" : "넘김"), lv:(LV.indexOf(l.lv) >= 0 ? l.lv : ""), mood:(MOOD.indexOf(l.mood) >= 0 ? l.mood : ""), trig:trigOf(l), cope:okList(l.cope, COPE)}; }); }
+    function rows(){ return logs.map(function(l){ return {t:l.t, kind:(l.kind === "drink" ? "마심" : "넘김"), lv:(LV.indexOf(l.lv) >= 0 ? l.lv : ""), mood:(MOOD.indexOf(l.mood) >= 0 ? l.mood : ""), trig:trigOf(l), cope:okList(l.cope, COPE.concat(["5분 버티기"]))}; }); }
 
     return {days:days, urge:urgeN, held:held, dry:dry, rows:rows};
   }
@@ -595,7 +596,7 @@ html.big body{zoom:1.18;}
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("이름 없는 요약 파일로 내보냈어요");
   };
   $("p_bak").onclick = function(){ $("x_out").click(); };
-  if(window.Native){ $("p_csv").parentNode.style.display = "none"; $("p_note").textContent = "이 화면을 상담 때 그대로 보여 주세요. 파일로 내보내기는 웹(브라우저)에서 할 수 있어요. 이 앱은 기록 도구이며 진단·판정을 하지 않아요."; }
+  if(window.Native){ $("p_csv").parentNode.style.display = "none"; $("x_out").style.display = "none"; $("p_note").textContent = "이 화면을 상담 때 그대로 보여 주세요. 파일로 내보내기는 웹(브라우저)에서 할 수 있어요. 이 앱은 기록 도구이며 진단·판정을 하지 않아요."; }
   var proFrom = null;
   $("p_back").onclick = function(){ show(proFrom || (st.start ? "help" : "start")); };
   Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(a){ a.addEventListener("click", function(e){ e.preventDefault(); var on = document.querySelector(".view.on"); proFrom = on ? on.id.slice(2) : null; show(a.dataset.go); }); });
