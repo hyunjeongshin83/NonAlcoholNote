@@ -10,6 +10,9 @@
 - **통계** — 지난 7일 마신 잔 수, 상황·기분 순위
 - **도움** — 정신건강위기상담 1577-0199 · 자살예방 109 · 응급 119, 큰 글씨, 내보내기·가져오기
 
+## 상담자용 요약
+도움 탭의 「약사·상담자와 함께 보기」는 금연노트의 `pro/` 화면(https://hyunjeongshin83.github.io/SmokeFreeNote/pro/)을 엽니다. 내보낸 파일을 상담용 요약·인쇄·연구용 CSV 로 바꾸며, 파일은 브라우저 안에서만 읽습니다.
+
 ## 실행
 `index.html` 을 브라우저로 열면 됩니다. GitHub Pages 에 올리면 휴대폰 홈 화면에 앱처럼 설치할 수 있습니다.
 주소: https://hyunjeongshin83.github.io/NonAlcoholNote/
