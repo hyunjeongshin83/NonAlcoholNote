@@ -257,7 +257,7 @@ html.big body{zoom:1.18;}
     <div class="stats">
       <div class="stat"><b id="h_dry">0</b><span>술 없는 날</span></div>
       <div class="stat"><b id="h_money">0원</b><span>아낀 돈(추정)</span></div>
-      <div class="stat"><b id="h_week">0잔</b><span>최근 7일 마신 술</span></div>
+      <div class="stat"><b id="h_week">0g</b><span>최근 7일 마신 순수 알코올(대략)</span></div>
     </div>
     <div class="card" id="h_reason_card" style="display:none"><div class="sect">나의 이유</div><p class="sub" id="h_reason" style="margin-top:0;color:var(--ink)"></p></div>
     <button class="btn sos" id="h_sos"><svg aria-hidden="true" focusable="false"><use href="#i-timer"/></svg>지금 술이 당겨요</button>
@@ -288,11 +288,11 @@ html.big body{zoom:1.18;}
   <!-- ④ 통계 -->
   <section class="view" id="v-stats">
     <div class="card">
-      <div class="sect">지난 7일 — 마신 잔 수</div>
+      <div class="sect">지난 7일 — 마신 순수 알코올(g, 대략)</div>
       <div class="bars" id="t_bars"></div>
-      <ul class="sr" id="t_sr" aria-label="지난 7일 하루별 마신 잔 수"></ul>
-      <div class="legend"><span><i></i>마신 잔 수</span><span><i class="slip"></i>마신 날</span></div>
-      <div class="kv"><div><b id="t_dry7">0일</b><span>지난 7일 중 술 없는 날(오늘 제외 · 기록 시작 뒤)</span></div><div><b id="t_cups7">0잔</b><span>지난 7일 마신 술</span></div></div>
+      <ul class="sr" id="t_sr" aria-label="지난 7일 하루별 마신 순수 알코올"></ul>
+      <div class="legend"><span><i></i>순수 알코올(g)</span><span><i class="slip"></i>마신 날</span></div>
+      <div class="kv"><div><b id="t_dry7">0일</b><span>지난 7일 중 술 없는 날(오늘 제외 · 기록 시작 뒤)</span></div><div><b id="t_cups7">0g</b><span>지난 7일 마신 순수 알코올(대략)</span></div></div>
     </div>
     <div class="card"><div class="sect">기록에 많이 나온 상황</div><ol class="rank" id="t_trig"></ol></div>
     <div class="card"><div class="sect">기록에 많이 나온 기분</div><ol class="rank" id="t_mood"></ol></div>
@@ -343,7 +343,7 @@ html.big body{zoom:1.18;}
         <button class="btn" id="p_csv">요약 내보내기 (CSV)</button>
         <button class="btn ghost" id="p_bak">전체 백업 (파일)</button>
       </div>
-      <p class="pro-note" id="p_note">요약 CSV 에는 이름·연락처가 없고 날짜와 시간대, 세기·기분·상황·대처만 들어가요. 이 앱은 기록 도구이며 진단·판정을 하지 않아요. 결과를 해석하는 일은 약사·상담자와 함께 해 주세요.</p>
+      <p class="pro-note" id="p_note">요약 CSV 에는 이름·연락처가 없고 날짜와 시간대, 갈망 점수, 술 종류·잔 수·순수 알코올 양(대략), 기분·상황·대처가 들어가요. 마신 술에 관한 민감한 내용이니 전할 사람을 확인하고 보내 주세요. 이 앱은 기록 도구이며 진단·판정을 하지 않아요. 결과를 해석하는 일은 약사·상담자와 함께 해 주세요.</p>
       <button class="btn ghost" id="p_back" style="margin-top:9px">뒤로</button>
     </div>
   </section>
@@ -386,6 +386,9 @@ html.big body{zoom:1.18;}
   // 술 종류별 대표 1회 분량(ml)·도수(%) — 알코올 g = ml × 도수% × 0.789(에탄올 밀도). 음료마다 달라 「대략」이며 기준·권고량이 아니다
   var BEV = [{k:"소주", u:"잔", ml:50, abv:17}, {k:"맥주", u:"캔", ml:355, abv:4.5}, {k:"와인", u:"잔", ml:150, abv:12}, {k:"막걸리", u:"잔", ml:200, abv:6}, {k:"양주", u:"잔", ml:30, abv:40}];
   function bevOf(k){ for(var i = 0; i < BEV.length; i++) if(BEV[i].k === k) return BEV[i]; return null; }
+  // 술 종류마다 1잔의 크기가 달라(소주 50ml · 맥주 355ml …) 잔 수를 더하지 않고 순수 알코올 g 로 합친다. 종류를 모르는 옛 기록은 따로 센다 (PR #7 Codex P2)
+  function sumAmt(arr){ var g = 0, unk = 0; arr.forEach(function(l){ if(bevOf(l.bev)) g += gramsOf(l.bev, l.cups||0); else unk++; }); return {g:Math.round(g*10)/10, unk:unk, n:arr.length}; }
+  function amtText(a){ return a.unk ? (a.g ? a.g+"g 이상" : a.n+"건 (양 모름)") : a.g+"g"; }
   function gramsOf(k, n){ var b = bevOf(k); return b ? Math.round(b.ml * b.abv / 100 * 0.789 * n * 10) / 10 : null; }
   var TRIG = ["퇴근 후", "식사 중", "모임·회식", "스트레스", "외로움", "지루함", "주말", "기쁜 일"];
   var COPE = ["물·차 마시기", "심호흡", "산책", "연락하기", "자리 피하기", "간식 먹기"];
@@ -476,8 +479,7 @@ html.big body{zoom:1.18;}
     $("h_dry").textContent = dryDays(st.start, Date.now());
     var expected = ms/864e5 * (st.freq/7) * st.price, spent = drinkDays * st.price;
     $("h_money").textContent = Math.max(0, Math.round((expected - spent)/100)*100).toLocaleString("ko-KR")+"원";
-    var wk = drinks().filter(function(l){ return l.t >= Date.now() - 7*864e5; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
-    $("h_week").textContent = wk+"잔";
+    $("h_week").textContent = amtText(sumAmt(drinks().filter(function(l){ return l.t >= Date.now() - 7*864e5; })));
     $("h_att").textContent = st.attempts.length ? (st.attempts.length+1)+"회차 시도" : "";
     $("h_reason_card").style.display = st.reason ? "" : "none"; $("h_reason").textContent = st.reason || "";
   }
@@ -557,17 +559,17 @@ html.big body{zoom:1.18;}
     $(el).innerHTML = ks.length ? ks.map(function(k,i){ return '<li><span class="n">'+(i+1)+'</span><span style="min-width:96px">'+esc(k)+'</span><div class="bar"><i style="width:'+(c[k]/m*100)+'%"></i></div><span class="c">'+c[k]+'번</span></li>'; }).join("") : '<li style="color:var(--d3)">기록이 쌓이면 보여요</li>';
   }
   function renderStats(){
-    var now = new Date(), cols = [], total = 0, dry = 0, max = 1, from = st.start ? dayStart(trackStart()) : Infinity, today = dayStart(Date.now());
+    var now = new Date(), cols = [], dry = 0, max = 1, from = st.start ? dayStart(trackStart()) : Infinity, today = dayStart(Date.now()), all = [];
     for(var i = 6; i >= 0; i--){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), k = dayKey(d.getTime());
-      var cups = st.logs.filter(function(l){ return l.kind === "drink" && dayKey(l.t) === k; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
-      var tracked = d.getTime() >= from;
-      cols.push({d:d, cups:cups, tracked:tracked}); total += cups; if(tracked && d.getTime() < today && !cups) dry++; if(cups > max) max = cups;
+      var dl = st.logs.filter(function(l){ return l.kind === "drink" && dayKey(l.t) === k; }), a = sumAmt(dl);
+      var tracked = d.getTime() >= from; all = all.concat(dl);
+      cols.push({d:d, a:a, tracked:tracked}); if(tracked && d.getTime() < today && !a.n) dry++; if(a.g > max) max = a.g;
     }
-    $("t_bars").innerHTML = cols.map(function(c){ var h = c.cups ? Math.max(4, c.cups/max*80) : 3;
-      return '<div class="b" aria-hidden="true"><b>'+(c.cups ? Number(c.cups) : "")+'</b><i class="'+(c.cups ? "slip" : "")+'" style="height:'+h+'px"></i><span>'+(c.d.getMonth()+1)+"/"+c.d.getDate()+'</span></div>'; }).join("");
-    $("t_sr").innerHTML = cols.map(function(c){ return "<li>"+(c.d.getMonth()+1)+"월 "+c.d.getDate()+"일 "+(c.cups ? c.cups+"잔" : (c.tracked ? "마시지 않음" : "기록 전"))+"</li>"; }).join("");
-    $("t_cups7").textContent = total+"잔"; $("t_dry7").textContent = dry+"일";
+    $("t_bars").innerHTML = cols.map(function(c){ var h = c.a.g ? Math.max(4, c.a.g/max*80) : (c.a.n ? 10 : 3);
+      return '<div class="b" aria-hidden="true"><b>'+(c.a.n ? (c.a.g ? Math.round(c.a.g)+(c.a.unk ? "+" : "") : "?") : "")+'</b><i class="'+(c.a.n ? "slip" : "")+'" style="height:'+h+'px"></i><span>'+(c.d.getMonth()+1)+"/"+c.d.getDate()+'</span></div>'; }).join("");
+    $("t_sr").innerHTML = cols.map(function(c){ return "<li>"+(c.d.getMonth()+1)+"월 "+c.d.getDate()+"일 "+(c.a.n ? amtText(c.a) : (c.tracked ? "마시지 않음" : "기록 전"))+"</li>"; }).join("");
+    $("t_cups7").textContent = amtText(sumAmt(all)); $("t_dry7").textContent = dry+"일";
     rank("t_trig", "trig"); rank("t_mood", "mood");
   }
 
