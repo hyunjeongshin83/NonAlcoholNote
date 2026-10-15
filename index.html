@@ -89,8 +89,8 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .log .lv{min-width:38px;text-align:center;font-weight:900;font-size:0.8125rem;border-radius:10px;padding:4px 0;background:var(--g0);color:var(--g6);}
 .log .lv.hi{background:#FDEDE9;color:var(--coral);}
 .log .body{flex:1;font-size:0.9375rem;color:var(--ink);line-height:1.4;}
-.log .meta{font-size:0.7812rem;color:var(--d4);margin-top:2px;}
-.log .del{color:var(--d4);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;}
+.log .meta{font-size:0.7812rem;color:var(--d3);margin-top:2px;}
+.log .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;}
 .empty{text-align:center;padding:24px;color:var(--d3);font-size:0.9375rem;background:var(--g0);border-radius:14px;border:1.5px dashed var(--line);}
 .chk{display:flex;align-items:center;gap:10px;font-size:0.9688rem;font-weight:700;color:var(--ink);padding:10px 0;min-height:44px;cursor:pointer;}
 .chk input{width:22px;height:22px;accent-color:var(--g5);flex:none;}
@@ -106,7 +106,7 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .bars .b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%;}
 .bars .b i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:var(--g2);min-height:3px;}
 .bars .b i.slip{background:var(--coral);}
-.bars .b span{overflow-wrap:anywhere;text-align:center;font-size:0.7188rem;color:var(--d4);font-weight:700;}
+.bars .b span{overflow-wrap:anywhere;text-align:center;font-size:0.7188rem;color:var(--d3);font-weight:700;}
 .bars .b b{font-size:0.75rem;color:var(--ink);font-weight:800;}
 .legend{display:flex;gap:14px;font-size:0.7812rem;color:var(--d3);margin-top:6px;}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:4px;background:var(--g2);}
@@ -140,7 +140,7 @@ html.big body{zoom:1.18;}
 .help b{display:block;font-size:1rem;}
 .help span{font-size:0.8438rem;color:var(--d3);}
 .help .go{margin-left:auto;color:var(--d4);font-weight:900;}
-.disc{font-size:0.875rem;color:var(--d4);text-align:center;line-height:1.5;margin-top:8px;}
+.disc{font-size:0.875rem;color:var(--d3);text-align:center;line-height:1.5;margin-top:8px;}
 
 /* 하단 탭 */
 .tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:grid;grid-template-columns:repeat(5,1fr);
@@ -168,6 +168,7 @@ html.big body{zoom:1.18;}
 }
 .sub,.disc,.empty,label,.tl .d,.tip,.help span{word-break:keep-all;}
 .tabs{grid-template-columns:repeat(4,1fr);}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;list-style:none;}
 .chip[aria-pressed="true"]{outline-offset:2px;}
 
 </style>
@@ -205,6 +206,7 @@ html.big body{zoom:1.18;}
         </div>
         <div class="fld"><label for="s_reason">나의 이유 <span style="font-weight:500">(선택)</span></label><input id="s_reason" maxlength="60" placeholder="예: 아침을 개운하게 시작하고 싶어서"></div>
         <button class="btn" id="s_save">시작하기</button>
+        <button class="btn ghost" id="s_import" style="margin-top:9px">백업 파일에서 가져오기</button>
       </div>
     </div>
   </section>
@@ -220,7 +222,7 @@ html.big body{zoom:1.18;}
     <div class="stats">
       <div class="stat"><b id="h_dry">0</b><span>술 없는 날</span></div>
       <div class="stat"><b id="h_money">0원</b><span>아낀 돈(추정)</span></div>
-      <div class="stat"><b id="h_week">0잔</b><span>이번 주 마신 술</span></div>
+      <div class="stat"><b id="h_week">0잔</b><span>최근 7일 마신 술</span></div>
     </div>
     <div class="card" id="h_reason_card" style="display:none"><div class="sect">나의 이유</div><p class="sub" id="h_reason" style="margin-top:0;color:var(--ink)"></p></div>
     <button class="btn sos" id="h_sos"><svg aria-hidden="true" focusable="false"><use href="#i-timer"/></svg>지금 술이 당겨요</button>
@@ -252,12 +254,13 @@ html.big body{zoom:1.18;}
   <section class="view" id="v-stats">
     <div class="card">
       <div class="sect">지난 7일 — 마신 잔 수</div>
-      <div class="bars" id="t_bars" role="img" aria-label="지난 7일 하루별 마신 잔 수"></div>
+      <div class="bars" id="t_bars"></div>
+      <ul class="sr" id="t_sr" aria-label="지난 7일 하루별 마신 잔 수"></ul>
       <div class="legend"><span><i></i>마신 잔 수</span><span><i class="slip"></i>마신 날</span></div>
-      <div class="kv"><div><b id="t_dry7">0일</b><span>지난 7일 중 술 없는 날</span></div><div><b id="t_cups7">0잔</b><span>지난 7일 마신 술</span></div></div>
+      <div class="kv"><div><b id="t_dry7">0일</b><span>지난 7일 중 술 없는 날(오늘 제외 · 기록 시작 뒤)</span></div><div><b id="t_cups7">0잔</b><span>지난 7일 마신 술</span></div></div>
     </div>
-    <div class="card"><div class="sect">어떤 상황에서 당겼나</div><ol class="rank" id="t_trig"></ol></div>
-    <div class="card"><div class="sect">어떤 기분일 때 당겼나</div><ol class="rank" id="t_mood"></ol></div>
+    <div class="card"><div class="sect">기록에 많이 나온 상황</div><ol class="rank" id="t_trig"></ol></div>
+    <div class="card"><div class="sect">기록에 많이 나온 기분</div><ol class="rank" id="t_mood"></ol></div>
   </section>
 
   <!-- ⑤ 도움 -->
@@ -318,17 +321,26 @@ html.big body{zoom:1.18;}
   var TIPS = ["찬물이나 차를 천천히 한 잔 마셔 보세요.", "코로 4초 들이쉬고 6초 내쉬기를 다섯 번 해 보세요.", "자리에서 일어나 5분만 걸어 보세요.", "믿는 사람에게 문자 한 줄을 보내 보세요.", "지금 술이 눈에 보이는 곳이라면 다른 곳으로 옮기세요.", "당기는 마음은 파도처럼 올랐다 가라앉아요. 지켜보기만 해도 돼요."];
   var st = load();
 
+  // 가져온 파일·옛 저장값은 믿지 않고 칸마다 모양을 맞춘다 (화면에 HTML 로 들어가는 값이 글자·숫자뿐이도록)
+  function cleanStr(v, max){ return typeof v === "string" ? v.slice(0, max) : ""; }
+  function cleanList(a){ return Array.isArray(a) ? a.slice(0, 20).map(function(x){ return cleanStr(x, 30); }).filter(Boolean) : []; }
+  function cleanLog(l){
+    if(!l || typeof l !== "object" || typeof l.t !== "number" || !isFinite(l.t)) return null;
+    var kind = l.kind === "drink" ? "drink" : "urge", cups = kind === "drink" ? Math.min(40, Math.max(1, Math.round(+l.cups || 1))) : 0;
+    return {v:1, t:l.t, kind:kind, cups:cups, lv: LV.indexOf(l.lv) >= 0 ? l.lv : null, mood: MOOD.indexOf(l.mood) >= 0 ? l.mood : null, trig: cleanList(l.trig), cope: cleanList(l.cope)};
+  }
+  function cleanAttempts(a){ return Array.isArray(a) ? a.filter(function(x){ return x && typeof x.start === "number" && typeof x.end === "number"; }).slice(0, 200).map(function(x){ return {start:x.start, end:x.end}; }) : []; }
   function blank(){ return {v:1, goal:null, start:null, freq:3, price:30000, reason:"", logs:[], attempts:[], big:false}; }
   function load(){
     try{
       var raw = localStorage.getItem(KEY); if(!raw) return blank();
       var o = JSON.parse(raw); var b = blank();
       Object.keys(b).forEach(function(k){ if(o[k] === undefined) o[k] = b[k]; });
-      if(!Array.isArray(o.logs)) o.logs = []; if(!Array.isArray(o.attempts)) o.attempts = [];
+      o.logs = (Array.isArray(o.logs) ? o.logs : []).map(cleanLog).filter(Boolean); o.attempts = cleanAttempts(o.attempts);
       return o;
     }catch(e){ return blank(); }
   }
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); } }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
 
   // ── 토스트 (금연노트와 같은 6초 · 마우스가 위에 있으면 유지)
   var mouseX = -1, mouseY = -1;
@@ -359,6 +371,7 @@ html.big body{zoom:1.18;}
     document.querySelectorAll(".view").forEach(function(s){ s.classList.toggle("on", s.id === "v-"+v); });
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
     $("tabs").style.display = v === "setup" ? "none" : "";
+    if(v === "setup") fillSetup();
     if(v === "log") renderLogs();
     if(v === "stats") renderStats();
     if(v === "home") tick();
@@ -368,18 +381,26 @@ html.big body{zoom:1.18;}
 
   // ── 계산
   function dayKey(ms){ var d = new Date(ms); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
-  function drinks(){ return st.logs.filter(function(l){ return l.kind === "drink" && l.t >= st.start; }); }
+  function drinks(){ return st.logs.filter(function(l){ return l.kind === "drink"; }); }
+  function dayStart(ms){ var d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }
+  function trackStart(){ var a = st.attempts.map(function(x){ return x.start; }); a.push(st.start); return Math.min.apply(null, a.filter(function(x){ return typeof x === "number"; })); }
+  // 끝난 날(오늘 이전) 중 마시지 않은 날 수 — 기록을 시작한 날부터만 센다
+  function dryDays(from, to){
+    var n = 0, drank = {}; drinks().forEach(function(l){ drank[dayKey(l.t)] = 1; });
+    for(var d = dayStart(from); d < dayStart(to); d = new Date(new Date(d).getFullYear(), new Date(d).getMonth(), new Date(d).getDate() + 1).getTime()) if(!drank[dayKey(d)]) n++;
+    return n;
+  }
   function tick(){
     if(!st.start) return;
     var ms = Math.max(0, Date.now() - st.start), d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4), s = Math.floor(ms%6e4/1e3);
     $("h_days").textContent = d; $("h_hms").textContent = h+"시간 "+m+"분 "+s+"초";
     $("h_lbl").textContent = st.goal === GOALS[1] ? "술을 줄여 가는 지" : "술 없이 지낸 지";
-    var dd = drinks(), days = {}; dd.forEach(function(l){ days[dayKey(l.t)] = 1; });
-    var elapsedDays = Math.max(1, Math.ceil(ms/864e5)), drinkDays = Object.keys(days).length;
-    $("h_dry").textContent = Math.max(0, elapsedDays - drinkDays);
+    var dd = drinks().filter(function(l){ return l.t >= st.start; }), days = {}; dd.forEach(function(l){ days[dayKey(l.t)] = 1; });
+    var drinkDays = Object.keys(days).length;
+    $("h_dry").textContent = dryDays(st.start, Date.now());
     var expected = ms/864e5 * (st.freq/7) * st.price, spent = drinkDays * st.price;
     $("h_money").textContent = Math.max(0, Math.round((expected - spent)/100)*100).toLocaleString("ko-KR")+"원";
-    var wk = dd.filter(function(l){ return l.t >= Date.now() - 7*864e5; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
+    var wk = drinks().filter(function(l){ return l.t >= Date.now() - 7*864e5; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
     $("h_week").textContent = wk+"잔";
     $("h_att").textContent = st.attempts.length ? (st.attempts.length+1)+"회차 시도" : "";
     $("h_reason_card").style.display = st.reason ? "" : "none"; $("h_reason").textContent = st.reason || "";
@@ -389,19 +410,24 @@ html.big body{zoom:1.18;}
   // ── 설정
   var goalChips = chips("s_goal", GOALS, false);
   function localInput(d){ var z = new Date(d.getTime() - d.getTimezoneOffset()*6e4); return z.toISOString().slice(0,16); }
-  $("s_start").value = localInput(new Date());
+  function fillSetup(){
+    $("s_start").value = localInput(new Date());
+    $("s_freq").value = st.freq; $("s_price").value = st.price; $("s_reason").value = st.reason || "";
+    goalChips.reset();
+  }
+  fillSetup();
   $("s_save").onclick = function(){
     var g = goalChips.get(); if(!g) return toast("목표를 골라 주세요");
     var t = new Date($("s_start").value).getTime(); if(isNaN(t)) return toast("시작일을 입력해 주세요");
     st.goal = g; st.start = t;
     st.freq = Math.min(7, Math.max(0, +$("s_freq").value || 0)); st.price = Math.max(0, +$("s_price").value || 0);
     st.reason = $("s_reason").value.trim().slice(0,60);
-    save(); show("home"); toast("응원할게요!");
+    if(save()){ show("home"); toast("응원할게요!"); }
   };
   $("x_reset").onclick = function(){
     if(!window.confirm("목표를 다시 정할까요? 지금까지의 기록은 그대로 남아요.")) return;
     if(st.start) st.attempts.push({start: st.start, end: Date.now()});
-    st.start = null; save(); show("setup");
+    st.start = null; if(save()) show("setup");
   };
 
   // ── 기록
@@ -417,7 +443,7 @@ html.big body{zoom:1.18;}
     if(!moodC.get()) return toast("그때 기분을 골라 주세요");
     var drank = k === KINDS[1], cups = drank ? Math.min(40, Math.max(1, Math.round(+$("l_cups").value || 1))) : 0;
     var r = {v:1, t:Date.now(), kind: drank ? "drink" : "urge", cups: cups, lv: lvC.get(), mood: moodC.get(), trig: trigC.get().slice(), cope: drank ? [] : copeC.get().slice()};
-    st.logs.unshift(r); save();
+    st.logs.unshift(r); if(!save()){ st.logs.shift(); return; }
     kindC.reset(); lvC.reset(); moodC.reset(); trigC.reset(); copeC.reset(); $("l_cups_box").style.display = "none"; $("l_cope_box").style.display = "";
     renderLogs(); afterLog(r); toast("기록했어요");
   };
@@ -439,7 +465,7 @@ html.big body{zoom:1.18;}
   $("l_list").onclick = function(e){
     var b = e.target.closest(".del"); if(!b) return;
     if(!window.confirm("이 기록을 지울까요?")) return;
-    st.logs.splice(+b.dataset.i, 1); save(); renderLogs(); toast("지웠어요");
+    var rm = st.logs.splice(+b.dataset.i, 1); if(!save()){ st.logs.splice(+b.dataset.i, 0, rm[0]); return; } renderLogs(); toast("지웠어요");
   };
 
   // ── 통계
@@ -449,31 +475,35 @@ html.big body{zoom:1.18;}
     $(el).innerHTML = ks.length ? ks.map(function(k,i){ return '<li><span class="n">'+(i+1)+'</span><span style="min-width:96px">'+esc(k)+'</span><div class="bar"><i style="width:'+(c[k]/m*100)+'%"></i></div><span class="c">'+c[k]+'번</span></li>'; }).join("") : '<li style="color:var(--d3)">기록이 쌓이면 보여요</li>';
   }
   function renderStats(){
-    var now = new Date(), cols = [], total = 0, dry = 0, max = 1;
+    var now = new Date(), cols = [], total = 0, dry = 0, max = 1, from = st.start ? dayStart(trackStart()) : Infinity, today = dayStart(Date.now());
     for(var i = 6; i >= 0; i--){
       var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), k = dayKey(d.getTime());
       var cups = st.logs.filter(function(l){ return l.kind === "drink" && dayKey(l.t) === k; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
-      cols.push({d:d, cups:cups}); total += cups; if(!cups) dry++; if(cups > max) max = cups;
+      var tracked = d.getTime() >= from;
+      cols.push({d:d, cups:cups, tracked:tracked}); total += cups; if(tracked && d.getTime() < today && !cups) dry++; if(cups > max) max = cups;
     }
     $("t_bars").innerHTML = cols.map(function(c){ var h = c.cups ? Math.max(4, c.cups/max*80) : 3;
-      return '<div class="b"><b>'+(c.cups||"")+'</b><i class="'+(c.cups ? "slip" : "")+'" style="height:'+h+'px"></i><span>'+(c.d.getMonth()+1)+"/"+c.d.getDate()+'</span></div>'; }).join("");
+      return '<div class="b" aria-hidden="true"><b>'+(c.cups ? Number(c.cups) : "")+'</b><i class="'+(c.cups ? "slip" : "")+'" style="height:'+h+'px"></i><span>'+(c.d.getMonth()+1)+"/"+c.d.getDate()+'</span></div>'; }).join("");
+    $("t_sr").innerHTML = cols.map(function(c){ return "<li>"+(c.d.getMonth()+1)+"월 "+c.d.getDate()+"일 "+(c.cups ? c.cups+"잔" : (c.tracked ? "마시지 않음" : "기록 전"))+"</li>"; }).join("");
     $("t_cups7").textContent = total+"잔"; $("t_dry7").textContent = dry+"일";
     rank("t_trig", "trig"); rank("t_mood", "mood");
   }
 
   // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
-  var sosTimer = null, sosOpener = null;
+  var sosTimer = null, sosOpener = null, sosStep = null;
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden && $("sos").classList.contains("on") && sosStep) sosStep(); });
   $("h_sos").onclick = function(ev){
-    var left = 300, ti = 0;
+    var deadline = Date.now() + 300000, ti = 0, lastTip = -1;
     if(!$("sos").classList.contains("on")) sosOpener = (ev && ev.currentTarget) || document.activeElement;
     $("sos").classList.add("on"); $("sos_card").focus();
-    function step(){
+    function step(){   // 남은 시간은 끝나는 시각에서 계산 — 화면이 꺼졌다 켜져도 실제 시간과 맞는다
+      var left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
       $("sos_t").textContent = Math.floor(left/60)+":"+("0"+left%60).slice(-2);
-      if(left%30 === 0) $("sos_tip").textContent = TIPS[ti++ % TIPS.length];
+      var slot = Math.floor((300 - left)/30);
+      if(slot !== lastTip && left > 0){ lastTip = slot; $("sos_tip").textContent = TIPS[ti++ % TIPS.length]; }
       if(left <= 0){ clearInterval(sosTimer); $("sos_tip").textContent = "5분을 버텼어요! 잘하셨어요!"; }
-      left--;
     }
-    clearInterval(sosTimer); step(); sosTimer = setInterval(step, 1000);
+    sosStep = step; clearInterval(sosTimer); step(); sosTimer = setInterval(step, 1000);
   };
   function closeSos(){
     clearInterval(sosTimer); $("sos").classList.remove("on");
@@ -483,7 +513,7 @@ html.big body{zoom:1.18;}
   $("sos_close").onclick = closeSos;
   $("sos_done").onclick = function(){
     closeSos();
-    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); save(); toast("멋져요! 기록에 남겼어요");
+    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); if(save()) toast("멋져요! 기록에 남겼어요");
   };
   document.addEventListener("keydown", function(e){
     if(!$("sos").classList.contains("on")) return;
@@ -504,7 +534,7 @@ html.big body{zoom:1.18;}
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "금주노트-"+new Date().toISOString().slice(0,10)+".json";
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("파일로 내보냈어요");
   };
-  $("x_in").onclick = function(){ $("x_file").click(); };
+  $("x_in").onclick = $("s_import").onclick = function(){ $("x_file").click(); };
   $("x_file").onchange = function(){
     var f = $("x_file").files[0]; if(!f) return;
     var rd = new FileReader();
@@ -512,11 +542,17 @@ html.big body{zoom:1.18;}
       try{
         var o = JSON.parse(rd.result);
         if(!o || o.app !== "nonalcohol" || !o.data || !Array.isArray(o.data.logs)) throw 0;
-        var seen = {}; st.logs.forEach(function(l){ seen[l.t+"|"+l.kind] = 1; }); var added = 0;
-        o.data.logs.forEach(function(l){ if(l && typeof l.t === "number" && !seen[l.t+"|"+l.kind]){ st.logs.push(l); added++; } });
+        var seen = {}; st.logs.forEach(function(l){ seen[l.t+"|"+l.kind] = 1; }); var added = 0, before = JSON.stringify(st);
+        o.data.logs.map(cleanLog).forEach(function(l){ if(l && !seen[l.t+"|"+l.kind]){ seen[l.t+"|"+l.kind] = 1; st.logs.push(l); added++; } });
         st.logs.sort(function(a,b){ return b.t - a.t; });
-        if(!st.start && o.data.start){ ["goal","start","freq","price","reason"].forEach(function(k){ st[k] = o.data[k]; }); }
-        save(); renderLogs(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
+        var d = o.data;
+        if(!st.start && typeof d.start === "number" && GOALS.indexOf(d.goal) >= 0){
+          st.goal = d.goal; st.start = d.start; st.freq = Math.min(7, Math.max(0, +d.freq || 0)); st.price = Math.max(0, +d.price || 0);
+          st.reason = cleanStr(d.reason, 60); st.attempts = cleanAttempts(d.attempts); st.big = !!d.big;
+          document.documentElement.classList.toggle("big", st.big); $("p_big").checked = st.big;
+        }
+        if(!save()){ st = JSON.parse(before); return; }
+        renderLogs(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
       }catch(e){ toast("금주노트 파일이 아니에요"); }
       $("x_file").value = "";
     };
