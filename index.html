@@ -645,13 +645,14 @@ html.big body{zoom:1.18;}
     window.NADB = { source:null, invalidate:function(){}, bind:nope, table:nope, exportBytes:nope, readFile:nope };
   }
   NADB.source = function(){ return st.logs; };
-  function dbBind(){ var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
   var dbTok = 0;
+  function dbBind(){ dbTok++; var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
   function dbShow(lim){
-    var box = $("db_table"), tok = ++dbTok; box.textContent = "불러오는 중…";   // 가장 나중 요청만 화면에 그린다 (PR #8 Codex)
-    NADB.table(box, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + lim)
+    var box = $("db_table"), tok = ++dbTok, tmp = document.createElement("div"); box.textContent = "불러오는 중…";   // 떼어 둔 요소에 먼저 그린 뒤, 아직 가장 나중 요청일 때만 화면에 옮긴다   // 가장 나중 요청만 화면에 그린다 (PR #8 Codex)
+    NADB.table(tmp, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + lim)
       .then(function(){
         if(tok !== dbTok) return;
+        box.textContent = ""; while(tmp.firstChild) box.appendChild(tmp.firstChild);
         var total = st.logs.length, p = document.createElement("p"); p.className = "sub"; p.style.margin = "8px 0 0";
         p.textContent = total > lim ? "최근 " + lim + "건만 보여 줘요 (전체 " + total + "건)." : "전체 " + total + "건을 모두 보여 줘요.";
         if(total > lim){ var m = document.createElement("button"); m.type = "button"; m.className = "btn ghost"; m.textContent = "100건 더 보기"; m.style.marginLeft = "8px"; m.onclick = function(){ dbShow(lim + 100); }; p.appendChild(m); }
