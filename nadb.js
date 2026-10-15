@@ -25,7 +25,10 @@
       document.head.appendChild(s);
     });
     libP = script.then(function(){ return window.initSqlJs({ locateFile: function(f){ return "vendor/" + f; } }); });
-    libP.catch(function(){ libP = null; });
+    libP.catch(function(){   // sql.js 는 실패한 약속도 자기 안에 붙들어 두므로, 스크립트를 지우고 다시 싣게 한다
+      libP = null; try{ delete window.initSqlJs; }catch(e){ window.initSqlJs = undefined; }
+      var old = document.querySelector('script[src="vendor/sql-wasm.js"]'); if(old) old.remove();
+    });
     return libP;
   }
   function isSelect(sql){ return /^\s*select\b/i.test(sql) && !/;\s*\S/.test(sql); }
