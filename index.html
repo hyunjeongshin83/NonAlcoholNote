@@ -518,7 +518,8 @@ html.big body{zoom:1.18;}
     $("h_att").textContent = st.attempts.length ? (st.attempts.length+1)+"회차 시도" : "";
     $("h_reason_card").style.display = st.reason ? "" : "none"; $("h_reason").textContent = st.reason || "";
   }
-  setInterval(function(){ if($("v-home").classList.contains("on")) tick(); }, 1000);
+  var homeDay = null;
+  setInterval(function(){ if($("v-home").classList.contains("on")){ tick(); var d = new Date().toDateString(); if(homeDay !== null && homeDay !== d) renderMain(); homeDay = d; } }, 1000);   // 자정을 넘기면 오늘 할 일·최근 기록도 새로 그린다
 
   // ── 설정
   var goalChips = chips("s_goal", GOALS, false);
@@ -717,7 +718,7 @@ html.big body{zoom:1.18;}
   // ── 메인(홈) 화면 — 오늘 할 일 · 바로가기 · 최근 기록 (대표님 요청 2026-10-15)
   function mainText(l){
     var cr = l.cr != null ? " · 갈망 " + l.cr : "";
-    if(l.kind === "drink"){ var bv = bevOf(l.bev); return "마셨어요" + (bv ? " · " + bv.k + " " + l.cups + bv.u + " · 약 " + gramsOf(bv.k, l.cups) + "g" : "") + cr; }
+    if(l.kind === "drink"){ var bv = bevOf(l.bev); return "마셨어요" + (bv ? " · " + bv.k + " " + l.cups + bv.u + " · 약 " + gramsOf(bv.k, l.cups) + "g" : (l.cups ? " · " + l.cups + "잔" : "")) + cr; }
     return "넘겼어요" + cr;
   }
   function refreshHome(){ if($("v-home").classList.contains("on")) renderMain(); }   // 메인이 열려 있는 채로 기록이 바뀌면 그 자리에서 다시 그린다
@@ -764,7 +765,7 @@ html.big body{zoom:1.18;}
   $("sos_close").onclick = closeSos;
   $("sos_done").onclick = function(){
     closeSos();
-    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); if(save()){ toast("멋져요! 기록에 남겼어요"); refreshHome(); }
+    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); if(save()){ toast("멋져요! 기록에 남겼어요"); refreshHome(); } else st.logs.shift();   // 저장이 안 됐으면 화면에도 남기지 않는다
   };
   document.addEventListener("keydown", function(e){
     if(!$("sos").classList.contains("on")) return;
