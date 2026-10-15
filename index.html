@@ -572,7 +572,7 @@ html.big body{zoom:1.18;}
     var dry = from == null ? 0 : dryDays(from, Date.now());
     var denom = urge.length + drunk.length;
     var held = denom ? Math.round(urge.length / denom * 100) + "%" : "—";
-    var urgeN = urge.length;
+    var urgeN = denom;   // 마신 기록도 당김 세기를 적으므로 「마시고 싶었던 순간」에 함께 센다 (PR #5 Codex P2)
     function trigOf(l){ return l.trig || []; }
     function rows(){ return logs.map(function(l){ return {t:l.t, kind:(l.kind === "drink" ? "마심" : "넘김"), lv:l.lv, mood:l.mood, trig:trigOf(l), cope:l.cope || []}; }); }
 
@@ -593,8 +593,9 @@ html.big body{zoom:1.18;}
     document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("이름 없는 요약 파일로 내보냈어요");
   };
   $("p_bak").onclick = function(){ $("x_out").click(); };
-  $("p_back").onclick = function(){ show(st.start ? "help" : "start"); };
-  Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(a){ a.addEventListener("click", function(e){ e.preventDefault(); show(a.dataset.go); }); });
+  var proFrom = null;
+  $("p_back").onclick = function(){ show(proFrom || (st.start ? "help" : "start")); };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(a){ a.addEventListener("click", function(e){ e.preventDefault(); var on = document.querySelector(".view.on"); proFrom = on ? on.id.slice(2) : null; show(a.dataset.go); }); });
 
   // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
   var sosTimer = null, sosOpener = null, sosStep = null;
