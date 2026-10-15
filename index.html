@@ -171,6 +171,11 @@ html.big body{zoom:1.18;}
 .sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;list-style:none;}
 .chip[aria-pressed="true"]{outline-offset:2px;}
 
+.dbtable{overflow:auto;max-height:320px;margin-top:10px;border:1px solid var(--line);border-radius:12px;}
+.dbtable:empty{display:none;}
+.dbtable table{border-collapse:collapse;font-size:0.8125rem;min-width:100%;}
+.dbtable th,.dbtable td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;color:var(--ink);}
+.dbtable th{position:sticky;top:0;background:var(--g0);font-weight:800;}
 </style>
 <style id="mn-theme">
 /* 시안 C (2026-10-15 대표님 선택) — 메디노트 틸로 맞춘 색 + 태블릿 두 칸. 값은 MediNote_app.html 의 --brand 줄과 같습니다.
@@ -214,7 +219,7 @@ html.big body{zoom:1.18;}
       <div class="title">알코올 줄이기</div>
       <p class="sub">마시고 싶은 순간을 적고, 넘긴 방법을 모아, 약사·상담자와 함께 볼 수 있는 금주·절주 기록장이에요.</p>
       <div class="tipcard on" style="margin-top:14px"><div class="t">먼저 알아 두세요</div><div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div></div>
-      <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭에서 파일로 내보내 약사·상담자와 함께 봐요.</span></div></li></ol>
+      <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭의 「약사·상담자와 함께 보기」로 요약을 함께 봐요.</span></div></li></ol>
       <button class="btn" id="st_go" style="margin-top:6px">시작하기</button>
       <a class="btn ghost" href="#pro" data-go="pro" style="margin-top:9px;text-decoration:none;justify-content:center">약사·상담자와 함께 보기</a>
     </div>
@@ -321,6 +326,14 @@ html.big body{zoom:1.18;}
       <button class="btn ghost" id="x_reset" style="margin-top:9px">목표 다시 정하기</button>
       <p class="sub">내보낸 파일은 약사·상담사와 함께 볼 때 쓰세요. 이 기기 밖으로는 자동으로 나가지 않아요.</p>
     </div>
+    <div class="card" id="db_card">
+      <div class="sect">내 기록 데이터베이스 (.db)</div>
+      <p class="sub" style="margin-top:0">기록 <b data-db="SELECT COUNT(*) || '건' FROM logs">—</b> · 마신 기록 <b data-db="SELECT COUNT(*) || '건' FROM logs WHERE kind = 'drink'">—</b>. 안드로이드 앱의 데이터베이스(SQLite)와 같은 모양의 파일이에요. 이 기기 안에서만 만들고 서버로 보내지 않아요.</p>
+      <button class="btn ghost" id="db_view" style="margin-top:10px">표로 보기</button>
+      <div id="db_table" class="dbtable" role="region" aria-label="기록 표" tabindex="0"></div>
+      <div class="row2" id="db_files" style="margin-top:9px"><button class="btn ghost" id="db_out">.db 내보내기</button><button class="btn ghost" id="db_in">.db 가져오기</button></div>
+      <input type="file" id="db_file" accept=".db,.sqlite,.sqlite3,application/vnd.sqlite3,application/x-sqlite3" style="display:none">
+    </div>
     <p class="disc">금주노트는 음주 기록장이며 진단·치료를 대신하지 않습니다.</p>
   </section>
   <!-- 함께 보기 (시안 D 를 앱 안으로 — 파일을 따로 불러오지 않고 내 기록에서 바로 요약) -->
@@ -372,6 +385,7 @@ html.big body{zoom:1.18;}
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<script src="nadb.js"></script>
 <script>
 (function(){
   "use strict";
@@ -416,7 +430,7 @@ html.big body{zoom:1.18;}
       return o;
     }catch(e){ return blank(); }
   }
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); if(window.NADB) NADB.invalidate(); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
 
   // ── 토스트 (금연노트와 같은 6초 · 마우스가 위에 있으면 유지)
   var mouseX = -1, mouseY = -1;
@@ -451,6 +465,7 @@ html.big body{zoom:1.18;}
     if(v === "start") $("st_go").textContent = st.start ? "오늘 화면으로" : "시작하기";
     if(v === "log") renderLogs();
     if(v === "stats") renderStats();
+    if(v === "help") dbBind();
     if(v === "pro") renderPro();
     if(v === "home") tick();
     window.scrollTo(0,0);
@@ -623,6 +638,60 @@ html.big body{zoom:1.18;}
   var proFrom = null;
   $("p_back").onclick = function(){ show(proFrom || (st.start ? "help" : "start")); };
   Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function(a){ a.addEventListener("click", function(e){ e.preventDefault(); var on = document.querySelector(".view.on"); proFrom = on ? on.id.slice(2) : null; show(a.dataset.go); }); });
+
+  // ── 데이터베이스(.db) — nadb.js (SQLite · 이 기기 안에서만)
+  if(!window.NADB){   // nadb.js 를 못 받았어도 앱 시작은 막히지 않게, 쓰는 순간 실패로 처리되는 빈 틀을 둔다 (PR #8 Codex P2)
+    var nope = function(){ return Promise.reject(new Error("nadb")); };
+    window.NADB = { source:null, invalidate:function(){}, bind:nope, table:nope, exportBytes:nope, readFile:nope };
+  }
+  NADB.source = function(){ return st.logs; };
+  var dbTok = 0;
+  function dbBind(){ dbTok++; var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
+  function dbShow(lim){
+    var box = $("db_table"), tok = ++dbTok, tmp = document.createElement("div"); box.textContent = "불러오는 중…";   // 떼어 둔 요소에 먼저 그린 뒤, 아직 가장 나중 요청일 때만 화면에 옮긴다   // 가장 나중 요청만 화면에 그린다 (PR #8 Codex)
+    NADB.table(tmp, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + lim)
+      .then(function(){
+        if(tok !== dbTok) return;
+        box.textContent = ""; while(tmp.firstChild) box.appendChild(tmp.firstChild);
+        var total = st.logs.length, p = document.createElement("p"); p.className = "sub"; p.style.margin = "8px 0 0";
+        p.textContent = total > lim ? "최근 " + lim + "건만 보여 줘요 (전체 " + total + "건)." : "전체 " + total + "건을 모두 보여 줘요.";
+        if(total > lim){ var m = document.createElement("button"); m.type = "button"; m.className = "btn ghost"; m.textContent = "100건 더 보기"; m.style.marginLeft = "8px"; m.onclick = function(){ dbShow(lim + 100); }; p.appendChild(m); }
+        box.appendChild(p);
+      })
+      .catch(function(){ if(tok === dbTok) box.textContent = "표를 만들지 못했어요. 인터넷에 연결된 상태로 한 번 열어 주세요"; });
+  }
+  $("db_view").onclick = function(){ dbShow(100); };
+  $("db_out").onclick = function(){
+    NADB.exportBytes().then(function(b){
+      var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([b], {type:"application/vnd.sqlite3"})); a.download = "알코올줄이기-기록-"+new Date().toISOString().slice(0,10)+".db";
+      document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast(".db 파일로 내보냈어요");
+    }).catch(function(){ toast("파일을 만들지 못했어요"); });
+  };
+  $("db_in").onclick = function(){ $("db_file").click(); };
+  $("db_file").onchange = function(){
+    var f = $("db_file").files[0]; if(!f) return;
+    if(f.size > 20*1024*1024){ $("db_file").value = ""; toast("파일이 너무 커요 (20MB까지)"); return; }   // 읽어 들이기 전에 크기부터 (PR #8 Codex P2)
+    var rd = new FileReader();
+    rd.onload = function(){
+      NADB.readFile(new Uint8Array(rd.result)).then(function(rows){
+        var seen = {}; st.logs.forEach(function(l){ seen[l.t+"|"+l.kind] = 1; }); var added = 0, before = JSON.stringify(st);
+        rows.map(cleanLog).forEach(function(l){ if(l){ l.trig = l.trig.filter(function(x){ return TRIG.indexOf(x) >= 0; }); l.cope = l.cope.filter(function(x){ return COPE.indexOf(x) >= 0 || x === "5분 버티기"; }); }   // 가져온 파일의 자유 글은 앱이 정한 선택지만 남긴다
+          if(l && !seen[l.t+"|"+l.kind]){ seen[l.t+"|"+l.kind] = 1; st.logs.push(l); added++; } });
+        st.logs.sort(function(a,b){ return b.t - a.t; });
+        if(!save()){ st = JSON.parse(before); return; }
+        renderLogs(); dbBind(); toast("기록 "+added+"건을 가져왔어요");
+      }).catch(function(e){ toast(e && e.message === "too many" ? "기록이 너무 많아요 (5000건까지 가져올 수 있어요)" : "알코올 줄이기 .db 파일이 아니에요"); });
+    };
+    rd.readAsArrayBuffer(f); $("db_file").value = "";
+  };
+  // 다른 탭이 저장하면 이 탭의 기록도 새로 읽어 와서, 낡은 기록으로 .db 를 만들거나 덮어쓰지 않게 한다 (PR #8 Sourcery)
+  window.addEventListener("storage", function(e){
+    if(e.key !== KEY || !e.newValue) return;
+    st = load(); NADB.invalidate(); renderLogs();
+    if($("v-stats").classList.contains("on")) renderStats();
+    if($("v-help").classList.contains("on")) dbBind();
+  });
+  if(window.Native) $("db_files").style.display = "none";   // 앱 셸에는 파일 내려받기·선택기가 아직 없다
 
   // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
   var sosTimer = null, sosOpener = null, sosStep = null;
