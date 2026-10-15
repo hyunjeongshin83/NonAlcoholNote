@@ -14,7 +14,7 @@
       "(SELECT group_concat(value, ' / ') FROM log_items WHERE log_id = l.id AND field = 'cope') AS cope FROM logs l"
   ];
   var MAX_BYTES = 20 * 1024 * 1024, MAX_LOGS = 5000;
-  var libP = null, db = null, dirty = true, building = null;
+  var libP = null, db = null, dirty = true, building = null, version = 0;
 
   function lib(){
     if(libP) return libP;
@@ -48,11 +48,15 @@
   }
   var NADB = {
     source: function(){ return []; },       // 앱이 기록 목록을 돌려주는 함수로 바꿔 둔다
-    invalidate: function(){ dirty = true; },
+    invalidate: function(){ dirty = true; version++; },
     open: function(){
       if(db && !dirty) return Promise.resolve(db);
       if(building) return building;
-      building = build(NADB.source()).then(function(d){ if(db) try{ db.close(); }catch(e){} db = d; dirty = false; building = null; return d; }, function(e){ building = null; throw e; });
+      var v = version;   // 만드는 동안 기록이 바뀌면(가져오기 등) 낡은 것을 깨끗한 것으로 내놓지 않고 다시 만든다 (PR #8 Sourcery)
+      building = build(NADB.source()).then(function(d){
+        building = null; if(db) try{ db.close(); }catch(e){} db = d; dirty = (v !== version);
+        return dirty ? NADB.open() : d;
+      }, function(e){ building = null; throw e; });
       return building;
     },
     /* SELECT 만 — 표로 읽는다. 결과: {columns, values} 또는 null */
@@ -68,8 +72,14 @@
       return lib().then(function(SQL){
         var d = new SQL.Database(bytes);
         try{
+          // 표 이름이 뷰(무한 재귀 등)로 바뀐 파일은 읽지 않는다 — logs·log_items·meta 는 일반 표여야 한다
+          var ty = d.exec("SELECT name, type FROM sqlite_master WHERE name IN ('meta','logs','log_items')"), ok = {};
+          if(ty.length) ty[0].values.forEach(function(v){ ok[v[0]] = v[1]; });
+          if(ok.meta !== "table" || ok.logs !== "table" || ok.log_items !== "table") throw new Error("schema");
           var m = d.exec("SELECT v FROM meta WHERE k = 'app'");
           if(!m.length || m[0].values[0][0] !== "nonalcohol") throw new Error("not ours");
+          var cnt = d.exec("SELECT COUNT(*) FROM logs")[0].values[0][0];
+          if(cnt > MAX_LOGS) throw new Error("too many");   // 조용히 자르지 않고 알린다 (PR #8 Sourcery)
           var r = d.exec("SELECT id, t, kind, cups, bev, cr, lv, mood FROM logs ORDER BY t DESC LIMIT " + MAX_LOGS), rows = {}, out = [];
           if(r.length) r[0].values.forEach(function(v){ var o = { t: v[1], kind: v[2], cups: v[3], bev: v[4], cr: v[5], lv: v[6], mood: v[7], trig: [], cope: [] }; rows[v[0]] = o; out.push(o); });
           var it = d.exec("SELECT log_id, field, value FROM log_items WHERE field IN ('trig','cope') ORDER BY log_id, pos LIMIT 200000");

@@ -666,10 +666,17 @@ html.big body{zoom:1.18;}
         st.logs.sort(function(a,b){ return b.t - a.t; });
         if(!save()){ st = JSON.parse(before); return; }
         renderLogs(); dbBind(); toast("기록 "+added+"건을 가져왔어요");
-      }).catch(function(){ toast("알코올 줄이기 .db 파일이 아니에요"); });
+      }).catch(function(e){ toast(e && e.message === "too many" ? "기록이 너무 많아요 (5000건까지 가져올 수 있어요)" : "알코올 줄이기 .db 파일이 아니에요"); });
     };
     rd.readAsArrayBuffer(f); $("db_file").value = "";
   };
+  // 다른 탭이 저장하면 이 탭의 기록도 새로 읽어 와서, 낡은 기록으로 .db 를 만들거나 덮어쓰지 않게 한다 (PR #8 Sourcery)
+  window.addEventListener("storage", function(e){
+    if(e.key !== KEY || !e.newValue) return;
+    st = load(); NADB.invalidate(); renderLogs();
+    if($("v-stats").classList.contains("on")) renderStats();
+    if($("v-help").classList.contains("on")) dbBind();
+  });
   if(window.Native) $("db_files").style.display = "none";   // 앱 셸에는 파일 내려받기·선택기가 아직 없다
 
   // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
