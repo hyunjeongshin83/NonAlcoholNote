@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>금주노트 · NonAlcohol Note</title>
+<meta name="theme-color" content="#0E6B48">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+/* 브랜드 색 #0E6B48 (금주노트 · 2026-09-28 확정). WCAG 상대휘도 대비:
+   --g6 #0E6B48 글자 / 흰 바탕 6.53:1 · / --g0 #EEF8F3 바탕 6.02:1 · / --g1 #D7F0E3 5.43:1
+   흰 글자 / --g4→--g7 (#0E6B48→#084A31) 버튼·히어로 6.53~10.32:1 · --g5 #0B5A3C 8.26:1
+   --d3 #5A716D / --g0 4.82:1 */
+:root{--g0:#EEF8F3;--g1:#D7F0E3;--g2:#A8DDC3;--g4:#0E6B48;--g5:#0B5A3C;--g6:#0E6B48;--g7:#084A31;
+  --ink:#122423;--d2:#324744;--d3:#5A716D;--d4:#8FA6A2;--line:#E6F1EE;--coral:#F6796B;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:var(--d2);letter-spacing:-.01em;
+  background:var(--g7);display:flex;justify-content:center;min-height:100vh;}
+.wrap{width:100%;max-width:430px;min-height:100vh;
+  background:linear-gradient(180deg,#EEF8F3 0%,#FAFDFB 30%,#EEF8F3 100%);
+  box-shadow:0 0 60px rgba(0,0,0,.28);padding:22px 16px 110px;}
+.eyebrow{display:flex;align-items:center;gap:8px;margin:0 4px 12px;}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--g4);box-shadow:0 0 0 4px rgba(14,107,72,.14);}
+.eyebrow span{font-size:0.875rem;font-weight:800;color:var(--g6);letter-spacing:.4px;}
+.eyebrow .cute{font-family:'Gaegu',cursive;font-weight:700;font-size:1rem;color:var(--g5);margin-left:auto;}
+.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px 18px 18px;box-shadow:0 12px 36px rgba(8,74,49,.08);margin-bottom:13px;}
+.title{font-family:'Gaegu','Pretendard',cursive;font-size:1.6875rem;font-weight:700;color:var(--ink);}
+.sub{font-size:0.9375rem;color:var(--d3);margin-top:4px;line-height:1.5;}
+.sect{font-family:'Gaegu',cursive;font-size:1.1875rem;font-weight:700;color:var(--g6);margin:4px 2px 9px;}
+label{display:block;font-size:0.9375rem;font-weight:800;color:var(--d3);margin-bottom:5px;}
+input,textarea,select{width:100%;font-family:inherit;font-size:1rem;padding:12px 13px;border-radius:12px;border:1.5px solid var(--line);background:#fff;color:var(--ink);}
+input:focus,textarea:focus,select:focus{border-color:var(--g4);box-shadow:0 0 0 3px rgba(14,107,72,.15);}
+/* 초점 표시 한 규칙 — VaccineNote-Park/docs/APP-STYLE.md §4 「초점 표시」 (VN-110-4 · 2026-10-06 운영 에이전트)
+   outline:none 을 걷어내고 키보드 초점(:focus-visible)에만 2px 링. 마우스·터치 초점은 지금처럼 링 없음.
+   링 색 --g4 #0E6B48: 바탕 #EEF8F3 6.02:1 · #FAFDFB 6.38:1 · #FFF 6.53:1 · #D7F0E3 5.43:1 (WCAG 상대휘도 계산 · 3:1 이상).
+   --tabbar-h 는 .tabs 실측 100% 63px · 200% 80px → 80px. 머리글은 sticky 가 없어 0. */
+:root{--focus-width:2px;--focus-offset:2px;--focus-color:var(--g4);--focus-on-brand:#FFFFFF;--tabbar-h:80px;--header-h:0px;}
+:focus-visible{outline:var(--focus-width) solid var(--focus-color);outline-offset:var(--focus-offset);}
+:focus:not(:focus-visible){outline:none;}
+[data-surface="brand"]{--focus-color:var(--focus-on-brand);}
+[data-focus="inset"] :focus-visible,[data-focus="inset"]:focus-visible{outline-offset:calc(var(--focus-width) * -1);}
+html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(var(--tabbar-h) + env(safe-area-inset-bottom,0px) + 8px);}
+.fld{margin-bottom:11px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.row2.tm{grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr));} /* 시각 입력: 글자 200%면 한 줄에 하나 (가로 넘침 방지) */
+.btn{width:100%;padding:14px;border:none;border-radius:13px;font-family:inherit;font-weight:800;font-size:1rem;color:#fff;background:linear-gradient(135deg,var(--g4),var(--g7));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px rgba(14,107,72,.3);}
+.btn.ghost{background:#fff;color:var(--g6);border:1.5px solid var(--line);box-shadow:none;}
+.btn svg{width:20px;height:20px;flex:none;}
+.btn.sos{background:linear-gradient(135deg,#F89B8F,var(--coral));box-shadow:0 6px 16px rgba(246,121,107,.3);}
+
+/* 홈 — 금연 일수 */
+.hero{text-align:center;padding:26px 18px 22px;background:linear-gradient(160deg,var(--g4),var(--g7));color:#fff;border:none;}
+.hero .lbl{font-size:0.9375rem;font-weight:700;opacity:.9;}
+.hero .days{font-size:4rem;font-weight:900;line-height:1.05;margin:6px 0 2px;letter-spacing:-.03em;}
+.hero .days small{font-size:1.5rem;font-weight:800;margin-left:4px;}
+.hero .hms{font-size:0.9375rem;opacity:.9;font-variant-numeric:tabular-nums;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px;}
+.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 8px;text-align:center;}
+.stat b{display:block;font-size:1.1875rem;color:var(--ink);font-weight:900;font-variant-numeric:tabular-nums;word-break:keep-all;}
+.stat span{font-size:0.8125rem;color:var(--d3);font-weight:700;}
+.next{display:flex;gap:12px;align-items:center;}
+.next .ic{flex:none;width:44px;height:44px;border-radius:14px;background:var(--g0);color:var(--g6);display:flex;align-items:center;justify-content:center;}
+.next .ic svg{width:26px;height:26px;}
+.bar{height:10px;border-radius:10px;background:var(--g1);overflow:hidden;margin-top:9px;}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--g4),var(--g6));border-radius:10px;}
+
+/* 건강 회복 타임라인 */
+.tl{list-style:none;position:relative;padding-left:26px;}
+.tl:before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:var(--line);}
+.tl li{position:relative;margin-bottom:16px;}
+.tl li:before{content:"";position:absolute;left:-23px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--d4);}
+.tl li.done:before{background:var(--g4);border-color:var(--g4);}
+.tl .t{font-size:0.8125rem;font-weight:800;color:var(--g6);}
+.tl li:not(.done) .t{color:var(--d4);}
+.tl .d{font-size:0.9688rem;color:var(--ink);line-height:1.45;margin-top:2px;}
+
+/* 흡연 욕구 기록 */
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{font-family:inherit;font-size:0.9062rem;font-weight:700;padding:9px 13px;border-radius:20px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--d3);}
+.chip.on{background:var(--g6);color:#fff;border-color:var(--g6);}
+.log{list-style:none;}
+.log li{display:flex;gap:10px;align-items:flex-start;padding:12px 2px;border-bottom:1px solid var(--line);}
+.log li:last-child{border-bottom:none;}
+.log .lv{min-width:38px;text-align:center;font-weight:900;font-size:0.8125rem;border-radius:10px;padding:4px 0;background:var(--g0);color:var(--g6);}
+.log .lv.hi{background:#FDEDE9;color:var(--coral);}
+.log .body{flex:1;font-size:0.9375rem;color:var(--ink);line-height:1.4;}
+.log .meta{font-size:0.7812rem;color:var(--d4);margin-top:2px;}
+.log .del{color:var(--d4);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;}
+.empty{text-align:center;padding:24px;color:var(--d3);font-size:0.9375rem;background:var(--g0);border-radius:14px;border:1.5px dashed var(--line);}
+.chk{display:flex;align-items:center;gap:10px;font-size:0.9688rem;font-weight:700;color:var(--ink);padding:10px 0;min-height:44px;cursor:pointer;}
+.chk input{width:22px;height:22px;accent-color:var(--g5);flex:none;}
+.tipcard{background:var(--g0);border:1.5px solid var(--g2);border-radius:14px;padding:14px 14px 12px;margin-top:12px;display:none;}
+.tipcard.on{display:block;}
+.tipcard.hi{background:#FFF3F0;border-color:#F9C4BC;}
+.tipcard .t{font-size:0.8125rem;font-weight:800;color:var(--g6);margin-bottom:4px;}
+.tipcard.hi .t{color:var(--coral);}
+.tipcard .d{font-size:1rem;color:var(--ink);line-height:1.5;}
+.hero .att{font-size:0.875rem;opacity:.92;margin-top:8px;font-weight:700;}
+/* 통계 */
+.bars{display:flex;align-items:flex-end;gap:6px;height:110px;padding:6px 2px 0;}
+.bars .b{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%;}
+.bars .b i{display:block;width:100%;border-radius:6px 6px 3px 3px;background:var(--g2);min-height:3px;}
+.bars .b i.slip{background:var(--coral);}
+.bars .b span{overflow-wrap:anywhere;text-align:center;font-size:0.7188rem;color:var(--d4);font-weight:700;}
+.bars .b b{font-size:0.75rem;color:var(--ink);font-weight:800;}
+.legend{display:flex;gap:14px;font-size:0.7812rem;color:var(--d3);margin-top:6px;}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:4px;background:var(--g2);}
+.legend i.slip{background:var(--coral);}
+.rank{list-style:none;}
+.rank li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:0.9688rem;color:var(--ink);}
+.rank li:last-child{border-bottom:none;}
+.rank .n{width:26px;height:26px;border-radius:50%;background:var(--g0);color:var(--g6);font-weight:900;font-size:0.8125rem;display:flex;align-items:center;justify-content:center;flex:none;}
+.rank .bar{flex:1;height:8px;margin:0;}
+.rank .c{font-size:0.8125rem;color:var(--d3);font-weight:700;min-width:36px;text-align:right;}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.kv div{background:var(--g0);border-radius:12px;padding:10px 12px;}
+.kv b{display:block;font-size:1.125rem;color:var(--ink);font-weight:900;}
+.kv span{font-size:0.7812rem;color:var(--d3);font-weight:700;}
+/* 기기·데이터 */
+.dev{list-style:none;}
+.dev li{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:0.9375rem;line-height:1.45;color:var(--ink);}
+.dev li:last-child{border-bottom:none;}
+.dev .st{flex:none;width:52px;text-align:center;font-size:0.75rem;font-weight:900;border-radius:9px;padding:4px 0;height:fit-content;}
+.dev .ok{background:var(--g1);color:var(--g6);}
+.dev .no{background:#FDEDE9;color:var(--coral);}
+.dev .md{background:#FFF7EC;color:#96601A;}
+.dev small{display:block;font-size:0.8125rem;color:var(--d3);}
+html.big body{zoom:1.18;}
+
+/* 도움받기 */
+.help a{display:flex;align-items:center;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);}
+.help a:last-child{border-bottom:none;}
+.help .ic{flex:none;width:40px;height:40px;border-radius:12px;background:var(--g0);color:var(--g6);display:flex;align-items:center;justify-content:center;}
+.help .ic svg{width:24px;height:24px;}
+.help b{display:block;font-size:1rem;}
+.help span{font-size:0.8438rem;color:var(--d3);}
+.help .go{margin-left:auto;color:var(--d4);font-weight:900;}
+.disc{font-size:0.875rem;color:var(--d4);text-align:center;line-height:1.5;margin-top:8px;}
+
+/* 하단 탭 */
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:grid;grid-template-columns:repeat(5,1fr);
+  background:#fff;border-top:1px solid var(--line);padding:6px 6px calc(8px + env(safe-area-inset-bottom));box-shadow:0 -6px 20px rgba(8,74,49,.06);}
+/* 글자가 아이콘 옆에 안 들어가면(390px · 글자 200% 에서 칸보다 1.2px 길어 다음 아이콘에 닿았음) 아이콘 밑으로 내려갑니다 — flex-wrap. 100% 는 옆 그대로 */
+/* 아이콘 옆에 글자 (세 앱 공통). 꺼진 탭 --d2 #324744 / 흰 바탕 9.90:1 · 켜진 탭 --g6 #0E6B48 / 흰 바탕 6.53:1 */
+.tabs button{font-family:inherit;background:none;border:none;cursor:pointer;padding:0 2px;min-height:48px;min-width:0;color:var(--d2);font-weight:800;font-size:0.8125rem;display:flex;flex-direction:row;flex-wrap:wrap;align-content:center;align-items:center;justify-content:center;column-gap:6px;row-gap:2px;padding-top:4px;padding-bottom:4px;white-space:nowrap;}
+.tabs button .i{width:20px;height:20px;flex:none;}
+.tabs button.on{color:var(--g6);}
+.view{display:none;}
+.view.on{display:block;}
+
+/* 도움 모달 (음주 욕구 5분 버티기) */
+.modal{position:fixed;inset:0;background:rgba(8,74,49,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:10;}
+.modal.on{display:flex;}
+.modal .card{max-width:398px;width:100%;text-align:center;}
+.timer{font-size:3.25rem;font-weight:900;color:var(--g6);font-variant-numeric:tabular-nums;margin:10px 0;}
+.tip{font-size:1rem;color:var(--ink);line-height:1.5;min-height:48px;}
+
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--g7);color:#fff;padding:11px 18px;border-radius:11px;font-size:0.875rem;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);z-index:20;}
+.toast.show{opacity:1;}   /* 포인터는 언제나 받지 않는다(아래 단추를 가로막지 않게). 마우스가 위에 있는지는 toast() 가 문서 단계 좌표로 판단한다 (PR #13 · #20 · #21 · #22 리뷰) */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+}
+.sub,.disc,.empty,label,.tl .d,.tip,.help span{word-break:keep-all;}
+.tabs{grid-template-columns:repeat(4,1fr);}
+.chip[aria-pressed="true"]{outline-offset:2px;}
+
+</style>
+</head>
+<body>
+<!-- 선 아이콘 한 벌 (금연노트와 공통) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/></symbol>
+  <symbol id="i-record" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></symbol>
+  <symbol id="i-health" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1z"/><path d="M7 12h2.5l1.5-2.5 2 5 1.5-2.5H17"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M5.6 5.6l3.6 3.6"/><path d="M14.8 14.8l3.6 3.6"/><path d="M14.8 9.2l3.6-3.6"/><path d="M5.6 18.4l3.6-3.6"/></symbol>
+  <symbol id="i-nosmoke" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l20 20"/><path d="M12 12H2v4h14"/><path d="M22 12v4"/><path d="M7 12v4"/><path d="M18 8c0-2.5-2-2.5-2-5"/><path d="M22 8c0-2.5-2-2.5-2-5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></symbol>
+</svg>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span><span>금주노트 · NonAlcohol Note</span><span class="cute">오늘도 한 걸음</span></div>
+
+  <!-- ① 설정 -->
+  <section class="view" id="v-setup">
+    <div class="card">
+      <div class="title">술 없는 날을 시작해요</div>
+      <p class="sub">목표와 평소 술자리를 알려주시면 술 없이 지낸 일수와 아낀 돈을 계산해 드려요. 모든 정보는 이 기기에만 저장돼요.</p>
+      <div class="tipcard on" style="margin-top:14px">
+        <div class="t">먼저 알아 두세요</div>
+        <div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div>
+      </div>
+      <div style="margin-top:16px">
+        <div class="fld"><label id="s_goal_lb">목표가 무엇인가요?</label><div class="chips" id="s_goal" role="group" aria-labelledby="s_goal_lb"></div></div>
+        <div class="fld"><label for="s_start">시작일·시각</label><input type="datetime-local" id="s_start"></div>
+        <div class="row2">
+          <div class="fld"><label for="s_freq">일주일에 마신 날</label><input type="number" id="s_freq" min="0" max="7" inputmode="numeric" value="3"></div>
+          <div class="fld"><label for="s_price">한 번 술값 (원)</label><input type="number" id="s_price" min="0" inputmode="numeric" value="30000"></div>
+        </div>
+        <div class="fld"><label for="s_reason">나의 이유 <span style="font-weight:500">(선택)</span></label><input id="s_reason" maxlength="60" placeholder="예: 아침을 개운하게 시작하고 싶어서"></div>
+        <button class="btn" id="s_save">시작하기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 오늘 -->
+  <section class="view" id="v-home">
+    <div class="card hero">
+      <div class="lbl" id="h_lbl">술 없이 지낸 지</div>
+      <div class="days"><span id="h_days">0</span><small>일째</small></div>
+      <div class="hms" id="h_hms">0시간 0분 0초</div>
+      <div class="att" id="h_att"></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="h_dry">0</b><span>술 없는 날</span></div>
+      <div class="stat"><b id="h_money">0원</b><span>아낀 돈(추정)</span></div>
+      <div class="stat"><b id="h_week">0잔</b><span>이번 주 마신 술</span></div>
+    </div>
+    <div class="card" id="h_reason_card" style="display:none"><div class="sect">나의 이유</div><p class="sub" id="h_reason" style="margin-top:0;color:var(--ink)"></p></div>
+    <button class="btn sos" id="h_sos"><svg aria-hidden="true" focusable="false"><use href="#i-timer"/></svg>지금 술이 당겨요</button>
+  </section>
+
+  <!-- ③ 기록 -->
+  <section class="view" id="v-log">
+    <div class="card">
+      <div class="title">오늘 기록</div>
+      <p class="sub">마시고 싶었던 순간이나 마신 술을 적어 두면 어떤 때 힘든지 보여요. 15초면 돼요.</p>
+      <div style="margin-top:14px">
+        <div class="fld"><label id="l_kind_lb">어땠나요?</label><div class="chips" id="l_kind" role="group" aria-labelledby="l_kind_lb"></div></div>
+        <div class="fld" id="l_cups_box" style="display:none"><label for="l_cups">마신 잔 수</label><input type="number" id="l_cups" min="1" max="40" inputmode="numeric" value="2"></div>
+        <div class="fld"><label id="l_lv_lb">얼마나 당겼나요?</label><div class="chips" id="l_lv" role="group" aria-labelledby="l_lv_lb"></div></div>
+        <div class="fld"><label id="l_mood_lb">그때 기분은요?</label><div class="chips" id="l_mood" role="group" aria-labelledby="l_mood_lb"></div></div>
+        <div class="fld"><label id="l_trig_lb">어떤 상황이었나요? (여러 개)</label><div class="chips" id="l_trig" role="group" aria-labelledby="l_trig_lb"></div></div>
+        <div class="fld" id="l_cope_box"><label id="l_cope_lb">어떻게 넘겼나요? (여러 개)</label><div class="chips" id="l_cope" role="group" aria-labelledby="l_cope_lb"></div></div>
+        <button class="btn" id="l_save">기록하기</button>
+        <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sect">지난 기록</div>
+      <ul class="log" id="l_list"></ul>
+    </div>
+  </section>
+
+  <!-- ④ 통계 -->
+  <section class="view" id="v-stats">
+    <div class="card">
+      <div class="sect">지난 7일 — 마신 잔 수</div>
+      <div class="bars" id="t_bars" role="img" aria-label="지난 7일 하루별 마신 잔 수"></div>
+      <div class="legend"><span><i></i>마신 잔 수</span><span><i class="slip"></i>마신 날</span></div>
+      <div class="kv"><div><b id="t_dry7">0일</b><span>지난 7일 중 술 없는 날</span></div><div><b id="t_cups7">0잔</b><span>지난 7일 마신 술</span></div></div>
+    </div>
+    <div class="card"><div class="sect">어떤 상황에서 당겼나</div><ol class="rank" id="t_trig"></ol></div>
+    <div class="card"><div class="sect">어떤 기분일 때 당겼나</div><ol class="rank" id="t_mood"></ol></div>
+  </section>
+
+  <!-- ⑤ 도움 -->
+  <section class="view" id="v-help">
+    <div class="card help">
+      <div class="sect">도움받기</div>
+      <a href="tel:1577-0199"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>정신건강위기상담전화 1577-0199</b><span>24시간 · 우울·불안·술 문제 상담</span></div><span class="go" aria-hidden="true">›</span></a>
+      <a href="tel:109"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>자살예방상담전화 109</b><span>24시간 · 마음이 너무 힘들 때</span></div><span class="go" aria-hidden="true">›</span></a>
+      <a href="tel:119"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>응급 119</b><span>끊은 뒤 심하게 떨리거나 의식이 흐릴 때</span></div><span class="go" aria-hidden="true">›</span></a>
+      <p class="sub" style="margin-top:10px">가까운 보건소·정신건강복지센터의 알코올 상담과 약국 상담도 이용할 수 있어요.</p>
+    </div>
+    <div class="card">
+      <div class="sect">내 기록</div>
+      <label class="chk"><input type="checkbox" id="p_big"> 큰 글씨로 보기</label>
+      <div class="row2" style="margin-top:6px">
+        <button class="btn ghost" id="x_out">내보내기</button>
+        <button class="btn ghost" id="x_in">가져오기</button>
+      </div>
+      <input type="file" id="x_file" accept="application/json,.json" style="display:none">
+      <button class="btn ghost" id="x_reset" style="margin-top:9px">목표 다시 정하기</button>
+      <p class="sub">내보낸 파일은 약사·상담사와 함께 볼 때 쓰세요. 이 기기 밖으로는 자동으로 나가지 않아요.</p>
+    </div>
+    <p class="disc">금주노트는 음주 기록장이며 진단·치료를 대신하지 않습니다.</p>
+  </section>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button data-v="home"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-home"/></svg><span>오늘</span></button>
+  <button data-v="log"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-record"/></svg><span>기록</span></button>
+  <button data-v="stats"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-chart"/></svg><span>통계</span></button>
+  <button data-v="help"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-help"/></svg><span>도움</span></button>
+</nav>
+
+<div class="modal" id="sos" role="dialog" aria-modal="true" aria-labelledby="sos_h">
+  <div class="card" id="sos_card" tabindex="-1">
+    <div class="title" id="sos_h">5분만 버텨봐요</div>
+    <p class="sub">마시고 싶은 마음은 보통 시간이 지나면 가라앉아요.</p>
+    <div class="timer" id="sos_t">5:00</div>
+    <div class="tip" id="sos_tip"></div>
+    <div class="row2" style="margin-top:16px">
+      <button class="btn ghost" id="sos_close">닫기</button>
+      <button class="btn" id="sos_done">넘겼어요</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(function(){
+  "use strict";
+  var KEY = "nonalcohol.v1";
+  var $ = function(id){ return document.getElementById(id); };
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  var GOALS = ["술 끊기", "술 줄이기"];
+  var KINDS = ["마시고 싶었는데 넘겼어요", "마셨어요"];
+  var LV = ["약함", "보통", "강함"], MOOD = ["좋음", "보통", "나쁨"];
+  var TRIG = ["퇴근 후", "식사 중", "모임·회식", "스트레스", "외로움", "지루함", "주말", "기쁜 일"];
+  var COPE = ["물·차 마시기", "심호흡", "산책", "연락하기", "자리 피하기", "간식 먹기"];
+  var TIPS = ["찬물이나 차를 천천히 한 잔 마셔 보세요.", "코로 4초 들이쉬고 6초 내쉬기를 다섯 번 해 보세요.", "자리에서 일어나 5분만 걸어 보세요.", "믿는 사람에게 문자 한 줄을 보내 보세요.", "지금 술이 눈에 보이는 곳이라면 다른 곳으로 옮기세요.", "당기는 마음은 파도처럼 올랐다 가라앉아요. 지켜보기만 해도 돼요."];
+  var st = load();
+
+  function blank(){ return {v:1, goal:null, start:null, freq:3, price:30000, reason:"", logs:[], attempts:[], big:false}; }
+  function load(){
+    try{
+      var raw = localStorage.getItem(KEY); if(!raw) return blank();
+      var o = JSON.parse(raw); var b = blank();
+      Object.keys(b).forEach(function(k){ if(o[k] === undefined) o[k] = b[k]; });
+      if(!Array.isArray(o.logs)) o.logs = []; if(!Array.isArray(o.attempts)) o.attempts = [];
+      return o;
+    }catch(e){ return blank(); }
+  }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); } }
+
+  // ── 토스트 (금연노트와 같은 6초 · 마우스가 위에 있으면 유지)
+  var mouseX = -1, mouseY = -1;
+  document.addEventListener("mousemove", function(e){ mouseX = e.clientX; mouseY = e.clientY; }, {passive:true});
+  function mouseOver(el){ var r = el.getBoundingClientRect(); return mouseX >= r.left && mouseX <= r.right && mouseY >= r.top && mouseY <= r.bottom; }
+  function toast(m){
+    var t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast._t);
+    var until = Date.now() + 6000;
+    (function tick(){ toast._t = setTimeout(function(){ if(mouseOver(t) || Date.now() < until) return tick(); t.classList.remove("show"); }, Math.max(250, until - Date.now())); })();
+  }
+
+  // ── 칩 (단일/복수 선택)
+  function chips(el, items, multi, onPick){
+    var box = $(el), sel = multi ? [] : null;
+    box.innerHTML = items.map(function(t, i){ return '<button type="button" class="chip" aria-pressed="false" data-i="'+i+'">'+esc(t)+'</button>'; }).join("");
+    box.onclick = function(e){
+      var b = e.target.closest(".chip"); if(!b) return; var i = +b.dataset.i;
+      if(multi){ var k = sel.indexOf(items[i]); if(k >= 0) sel.splice(k,1); else sel.push(items[i]); }
+      else sel = (sel === items[i]) ? null : items[i];
+      Array.prototype.forEach.call(box.children, function(c){ var on = multi ? sel.indexOf(items[+c.dataset.i]) >= 0 : sel === items[+c.dataset.i]; c.classList.toggle("on", on); c.setAttribute("aria-pressed", on ? "true" : "false"); });
+      if(onPick) onPick(sel);
+    };
+    return { get: function(){ return sel; }, reset: function(){ sel = multi ? [] : null; Array.prototype.forEach.call(box.children, function(c){ c.classList.remove("on"); c.setAttribute("aria-pressed","false"); }); } };
+  }
+
+  // ── 화면
+  function show(v){
+    document.querySelectorAll(".view").forEach(function(s){ s.classList.toggle("on", s.id === "v-"+v); });
+    document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
+    $("tabs").style.display = v === "setup" ? "none" : "";
+    if(v === "log") renderLogs();
+    if(v === "stats") renderStats();
+    if(v === "home") tick();
+    window.scrollTo(0,0);
+  }
+  document.getElementById("tabs").onclick = function(e){ var b = e.target.closest("button"); if(b && st.start) show(b.dataset.v); };
+
+  // ── 계산
+  function dayKey(ms){ var d = new Date(ms); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function drinks(){ return st.logs.filter(function(l){ return l.kind === "drink" && l.t >= st.start; }); }
+  function tick(){
+    if(!st.start) return;
+    var ms = Math.max(0, Date.now() - st.start), d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4), s = Math.floor(ms%6e4/1e3);
+    $("h_days").textContent = d; $("h_hms").textContent = h+"시간 "+m+"분 "+s+"초";
+    $("h_lbl").textContent = st.goal === GOALS[1] ? "술을 줄여 가는 지" : "술 없이 지낸 지";
+    var dd = drinks(), days = {}; dd.forEach(function(l){ days[dayKey(l.t)] = 1; });
+    var elapsedDays = Math.max(1, Math.ceil(ms/864e5)), drinkDays = Object.keys(days).length;
+    $("h_dry").textContent = Math.max(0, elapsedDays - drinkDays);
+    var expected = ms/864e5 * (st.freq/7) * st.price, spent = drinkDays * st.price;
+    $("h_money").textContent = Math.max(0, Math.round((expected - spent)/100)*100).toLocaleString("ko-KR")+"원";
+    var wk = dd.filter(function(l){ return l.t >= Date.now() - 7*864e5; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
+    $("h_week").textContent = wk+"잔";
+    $("h_att").textContent = st.attempts.length ? (st.attempts.length+1)+"회차 시도" : "";
+    $("h_reason_card").style.display = st.reason ? "" : "none"; $("h_reason").textContent = st.reason || "";
+  }
+  setInterval(function(){ if($("v-home").classList.contains("on")) tick(); }, 1000);
+
+  // ── 설정
+  var goalChips = chips("s_goal", GOALS, false);
+  function localInput(d){ var z = new Date(d.getTime() - d.getTimezoneOffset()*6e4); return z.toISOString().slice(0,16); }
+  $("s_start").value = localInput(new Date());
+  $("s_save").onclick = function(){
+    var g = goalChips.get(); if(!g) return toast("목표를 골라 주세요");
+    var t = new Date($("s_start").value).getTime(); if(isNaN(t)) return toast("시작일을 입력해 주세요");
+    st.goal = g; st.start = t;
+    st.freq = Math.min(7, Math.max(0, +$("s_freq").value || 0)); st.price = Math.max(0, +$("s_price").value || 0);
+    st.reason = $("s_reason").value.trim().slice(0,60);
+    save(); show("home"); toast("응원할게요!");
+  };
+  $("x_reset").onclick = function(){
+    if(!window.confirm("목표를 다시 정할까요? 지금까지의 기록은 그대로 남아요.")) return;
+    if(st.start) st.attempts.push({start: st.start, end: Date.now()});
+    st.start = null; save(); show("setup");
+  };
+
+  // ── 기록
+  var kindC = chips("l_kind", KINDS, false, function(k){
+    var drank = k === KINDS[1];
+    $("l_cups_box").style.display = drank ? "" : "none"; $("l_cope_box").style.display = drank ? "none" : "";
+  });
+  var lvC = chips("l_lv", LV, false), moodC = chips("l_mood", MOOD, false), trigC = chips("l_trig", TRIG, true), copeC = chips("l_cope", COPE, true);
+  $("l_cope_box").style.display = "";
+  $("l_save").onclick = function(){
+    var k = kindC.get(); if(!k) return toast("어땠는지 골라 주세요");
+    if(!lvC.get()) return toast("얼마나 당겼는지 골라 주세요");
+    if(!moodC.get()) return toast("그때 기분을 골라 주세요");
+    var drank = k === KINDS[1], cups = drank ? Math.min(40, Math.max(1, Math.round(+$("l_cups").value || 1))) : 0;
+    var r = {v:1, t:Date.now(), kind: drank ? "drink" : "urge", cups: cups, lv: lvC.get(), mood: moodC.get(), trig: trigC.get().slice(), cope: drank ? [] : copeC.get().slice()};
+    st.logs.unshift(r); save();
+    kindC.reset(); lvC.reset(); moodC.reset(); trigC.reset(); copeC.reset(); $("l_cups_box").style.display = "none"; $("l_cope_box").style.display = "";
+    renderLogs(); afterLog(r); toast("기록했어요");
+  };
+  function afterLog(r){
+    var tip = TIPS[Math.floor(Math.random()*TIPS.length)], el = $("l_tip");
+    if(r.kind === "drink"){ $("l_tip_t").textContent = "이번 시도는 계속돼요"; $("l_tip_d").textContent = "적어 주셔서 고마워요. 마신 날도 기록일 뿐이에요. 다음에 비슷한 상황에서는 "+tip.replace(/\.$/,"")+""; }
+    else { $("l_tip_t").textContent = "잘 넘기셨어요"; $("l_tip_d").textContent = "다음에 또 당기면 이렇게 해 보세요 — "+tip; }
+    el.classList.toggle("hi", r.lv === LV[2]); el.classList.add("on");
+  }
+  function renderLogs(){
+    if(!st.logs.length){ $("l_list").innerHTML = '<li style="border:none"><div class="empty" style="width:100%">아직 기록이 없어요</div></li>'; return; }
+    $("l_list").innerHTML = st.logs.slice(0,30).map(function(l, i){
+      var d = new Date(l.t), when = (d.getMonth()+1)+"/"+d.getDate()+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2);
+      var head = l.kind === "drink" ? "마셨어요 · "+l.cups+"잔" : "넘겼어요";
+      var meta = [l.mood && "기분 "+l.mood].concat(l.trig || []).concat(l.cope || []).filter(Boolean).join(" · ");
+      return '<li><span class="lv'+(l.lv === LV[2] ? " hi" : "")+'">'+esc(l.lv||"")+'</span><div class="body">'+esc(head)+'<div class="meta">'+esc(when)+(meta ? " · "+esc(meta) : "")+'</div></div><button class="del" data-i="'+i+'" aria-label="이 기록 지우기">×</button></li>';
+    }).join("");
+  }
+  $("l_list").onclick = function(e){
+    var b = e.target.closest(".del"); if(!b) return;
+    if(!window.confirm("이 기록을 지울까요?")) return;
+    st.logs.splice(+b.dataset.i, 1); save(); renderLogs(); toast("지웠어요");
+  };
+
+  // ── 통계
+  function rank(el, key){
+    var c = {}; st.logs.forEach(function(l){ (key === "mood" ? [l.mood] : l.trig || []).forEach(function(k){ if(k) c[k] = (c[k]||0) + 1; }); });
+    var ks = Object.keys(c).sort(function(a,b){ return c[b]-c[a]; }).slice(0,5), m = ks.length ? c[ks[0]] : 1;
+    $(el).innerHTML = ks.length ? ks.map(function(k,i){ return '<li><span class="n">'+(i+1)+'</span><span style="min-width:96px">'+esc(k)+'</span><div class="bar"><i style="width:'+(c[k]/m*100)+'%"></i></div><span class="c">'+c[k]+'번</span></li>'; }).join("") : '<li style="color:var(--d3)">기록이 쌓이면 보여요</li>';
+  }
+  function renderStats(){
+    var now = new Date(), cols = [], total = 0, dry = 0, max = 1;
+    for(var i = 6; i >= 0; i--){
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), k = dayKey(d.getTime());
+      var cups = st.logs.filter(function(l){ return l.kind === "drink" && dayKey(l.t) === k; }).reduce(function(a,l){ return a + (l.cups||0); }, 0);
+      cols.push({d:d, cups:cups}); total += cups; if(!cups) dry++; if(cups > max) max = cups;
+    }
+    $("t_bars").innerHTML = cols.map(function(c){ var h = c.cups ? Math.max(4, c.cups/max*80) : 3;
+      return '<div class="b"><b>'+(c.cups||"")+'</b><i class="'+(c.cups ? "slip" : "")+'" style="height:'+h+'px"></i><span>'+(c.d.getMonth()+1)+"/"+c.d.getDate()+'</span></div>'; }).join("");
+    $("t_cups7").textContent = total+"잔"; $("t_dry7").textContent = dry+"일";
+    rank("t_trig", "trig"); rank("t_mood", "mood");
+  }
+
+  // ── 5분 버티기 (창 열림·닫힘 포커스 · Esc · Tab 가둠 — SmokeFreeNote VN-144-1 과 같은 규칙)
+  var sosTimer = null, sosOpener = null;
+  $("h_sos").onclick = function(ev){
+    var left = 300, ti = 0;
+    if(!$("sos").classList.contains("on")) sosOpener = (ev && ev.currentTarget) || document.activeElement;
+    $("sos").classList.add("on"); $("sos_card").focus();
+    function step(){
+      $("sos_t").textContent = Math.floor(left/60)+":"+("0"+left%60).slice(-2);
+      if(left%30 === 0) $("sos_tip").textContent = TIPS[ti++ % TIPS.length];
+      if(left <= 0){ clearInterval(sosTimer); $("sos_tip").textContent = "5분을 버텼어요! 잘하셨어요!"; }
+      left--;
+    }
+    clearInterval(sosTimer); step(); sosTimer = setInterval(step, 1000);
+  };
+  function closeSos(){
+    clearInterval(sosTimer); $("sos").classList.remove("on");
+    var o = (sosOpener && sosOpener.offsetParent) ? sosOpener : (document.querySelector("#tabs button.on") || $("h_sos"));
+    sosOpener = null; if(o && o.focus) o.focus();
+  }
+  $("sos_close").onclick = closeSos;
+  $("sos_done").onclick = function(){
+    closeSos();
+    st.logs.unshift({v:1, t:Date.now(), kind:"urge", cups:0, lv:"보통", mood:null, trig:[], cope:["5분 버티기"]}); save(); toast("멋져요! 기록에 남겼어요");
+  };
+  document.addEventListener("keydown", function(e){
+    if(!$("sos").classList.contains("on")) return;
+    if(e.key === "Escape"){ e.preventDefault(); closeSos(); return; }
+    if(e.key !== "Tab") return;
+    var first = $("sos_close"), last = $("sos_done"), a = document.activeElement;
+    if(e.shiftKey && (a === first || a === $("sos_card"))){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && a === last){ e.preventDefault(); first.focus(); }
+    else if(!$("sos").contains(a)){ e.preventDefault(); first.focus(); }
+  });
+
+  // ── 설정: 큰 글씨 · 내보내기 · 가져오기
+  if(st.big) document.documentElement.classList.add("big");
+  $("p_big").checked = !!st.big;
+  $("p_big").onchange = function(){ st.big = $("p_big").checked; document.documentElement.classList.toggle("big", st.big); save(); };
+  $("x_out").onclick = function(){
+    var blob = new Blob([JSON.stringify({app:"nonalcohol", v:1, exported:new Date().toISOString(), data:st}, null, 1)], {type:"application/json"});
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "금주노트-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500); toast("파일로 내보냈어요");
+  };
+  $("x_in").onclick = function(){ $("x_file").click(); };
+  $("x_file").onchange = function(){
+    var f = $("x_file").files[0]; if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      try{
+        var o = JSON.parse(rd.result);
+        if(!o || o.app !== "nonalcohol" || !o.data || !Array.isArray(o.data.logs)) throw 0;
+        var seen = {}; st.logs.forEach(function(l){ seen[l.t+"|"+l.kind] = 1; }); var added = 0;
+        o.data.logs.forEach(function(l){ if(l && typeof l.t === "number" && !seen[l.t+"|"+l.kind]){ st.logs.push(l); added++; } });
+        st.logs.sort(function(a,b){ return b.t - a.t; });
+        if(!st.start && o.data.start){ ["goal","start","freq","price","reason"].forEach(function(k){ st[k] = o.data[k]; }); }
+        save(); renderLogs(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
+      }catch(e){ toast("금주노트 파일이 아니에요"); }
+      $("x_file").value = "";
+    };
+    rd.readAsText(f);
+  };
+
+  // ── 시작
+  if(!st.start){ show("setup"); }
+  else {
+    var q = new URLSearchParams(location.search), tab = q.get("tab");
+    show(["home","log","stats","help"].indexOf(tab) >= 0 ? tab : "home");
+    if(q.get("sos") === "1") $("h_sos").onclick();
+  }
+  if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(function(){});
+})();
+</script>
+</body>
+</html>
