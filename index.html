@@ -646,19 +646,20 @@ html.big body{zoom:1.18;}
   }
   NADB.source = function(){ return st.logs; };
   function dbBind(){ var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
-  var dbLimit = 100;
-  function dbShow(){
-    var box = $("db_table"); box.textContent = "불러오는 중…";
-    NADB.table(box, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + dbLimit)
+  var dbTok = 0;
+  function dbShow(lim){
+    var box = $("db_table"), tok = ++dbTok; box.textContent = "불러오는 중…";   // 가장 나중 요청만 화면에 그린다 (PR #8 Codex)
+    NADB.table(box, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT " + lim)
       .then(function(){
+        if(tok !== dbTok) return;
         var total = st.logs.length, p = document.createElement("p"); p.className = "sub"; p.style.margin = "8px 0 0";
-        p.textContent = total > dbLimit ? "최근 " + dbLimit + "건만 보여 줘요 (전체 " + total + "건)." : "전체 " + total + "건을 모두 보여 줘요.";
-        if(total > dbLimit){ var m = document.createElement("button"); m.type = "button"; m.className = "btn ghost"; m.textContent = "100건 더 보기"; m.style.marginLeft = "8px"; m.onclick = function(){ dbLimit += 100; dbShow(); }; p.appendChild(m); }
+        p.textContent = total > lim ? "최근 " + lim + "건만 보여 줘요 (전체 " + total + "건)." : "전체 " + total + "건을 모두 보여 줘요.";
+        if(total > lim){ var m = document.createElement("button"); m.type = "button"; m.className = "btn ghost"; m.textContent = "100건 더 보기"; m.style.marginLeft = "8px"; m.onclick = function(){ dbShow(lim + 100); }; p.appendChild(m); }
         box.appendChild(p);
       })
-      .catch(function(){ box.textContent = "표를 만들지 못했어요. 인터넷에 연결된 상태로 한 번 열어 주세요"; });
+      .catch(function(){ if(tok === dbTok) box.textContent = "표를 만들지 못했어요. 인터넷에 연결된 상태로 한 번 열어 주세요"; });
   }
-  $("db_view").onclick = function(){ dbLimit = 100; dbShow(); };
+  $("db_view").onclick = function(){ dbShow(100); };
   $("db_out").onclick = function(){
     NADB.exportBytes().then(function(b){
       var a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([b], {type:"application/vnd.sqlite3"})); a.download = "알코올줄이기-기록-"+new Date().toISOString().slice(0,10)+".db";
