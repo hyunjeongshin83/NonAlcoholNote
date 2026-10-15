@@ -641,7 +641,7 @@ html.big body{zoom:1.18;}
 
   // ── 데이터베이스(.db) — nadb.js (SQLite · 이 기기 안에서만)
   NADB.source = function(){ return st.logs; };
-  function dbBind(){ if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }
+  function dbBind(){ var t = $("db_table"); if(t) t.textContent = ""; if(window.NADB) NADB.bind($("db_card")).catch(function(){}); }   // 다른 표가 남아 있지 않게 먼저 비운다
   $("db_view").onclick = function(){
     var box = $("db_table"); box.textContent = "불러오는 중…";
     NADB.table(box, "SELECT at AS 시각, kind AS 구분, bev AS 술, cups AS 수량, cr AS 갈망, lv AS 세기, mood AS 기분, trig AS 상황, cope AS 대처 FROM logs_flat ORDER BY t DESC LIMIT 100")
