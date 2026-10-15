@@ -815,7 +815,7 @@ html.big body{zoom:1.18;}
     if(v === "stats") renderStats();
     if(v === "pro") renderPro();
     if(v === "help"){ var tableOpen = $("db_table").childNodes.length > 0; dbBind(); if(tableOpen) dbShow(dbLast); }   // 열려 있던 표인지 먼저 확인한 뒤 카드를 다시 묶는다
-    if(v === "setup"){ fillSetup(); toast("다른 탭에서 설정이 바뀌어 새로 불러왔어요"); }   // 낡은 입력칸이 새 설정을 덮어쓰지 않게
+    if(v === "setup" && st.start){ show("home"); toast("다른 탭에서 이미 시작했어요"); }   // 설정 화면은 시작 전에만 열린다 — 다른 탭에서 시작했으면 낡은 설정 화면을 떠나 홈으로 (저장하면 진행 중인 목표를 덮어쓰게 되므로)
     refreshHome();
   }
   if(window.Native) $("db_files").style.display = "none";   // 앱 셸에는 파일 내려받기·선택기가 아직 없다
