@@ -791,7 +791,7 @@ html.big body{zoom:1.18;}
   });
   var dbLast = 100;
   function afterPull(){   // 다른 탭의 변경을 합친 뒤, 열려 있는 화면을 모두 새로 그린다
-    NADB.invalidate(); renderLogs();
+    NADB.invalidate(); renderLogs(); document.documentElement.classList.toggle("big", !!st.big);   // 다른 탭에서 바꾼 큰 글씨 설정도 바로 적용
     var on = document.querySelector(".view.on"), v = on ? on.id.slice(2) : "";
     if(!st.start && v !== "start" && v !== "setup"){ show("start"); return; }   // 다른 탭에서 목표를 다시 정했으면 이 탭도 시작 화면으로
     if(v === "stats") renderStats();
