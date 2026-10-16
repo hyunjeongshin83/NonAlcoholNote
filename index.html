@@ -1083,14 +1083,13 @@ html.big body{zoom:1.18;}
         o.data.logs.map(cleanLog).forEach(function(l){ if(l && !seen[l.t+"|"+l.kind]){ seen[l.t+"|"+l.kind] = 1; st.logs.push(l); added++; } });
         st.logs.sort(function(a,b){ return b.t - a.t; });
         var d = o.data;
-        cleanMedia(d.media).forEach(function(m){ if(!st.media.some(function(x){ return x.id === m.id; })) st.media.push(m); }); st.media.sort(function(a,b){ return b.t - a.t; }); var cp2 = capMedia(st.media), gone = cp2.evicted; st.media = cp2.keep;   // 사진은 기기 안에만 있어 가져온 기록에는 그림 없이 시각·바코드·메모만 들어온다
+        cleanMedia(d.media).forEach(function(m){ if(st.media.length < 200 && !st.media.some(function(x){ return x.id === m.id; })) st.media.push(m); }); st.media.sort(function(a,b){ return b.t - a.t; });   // 가져온 기록은 빈 자리에만 들어오고 이 기기의 사진을 밀어내지 않는다 (그림이 없는 기록이 있는 사진을 대신하지 않게)   // 사진은 기기 안에만 있어 가져온 기록에는 그림 없이 시각·바코드·메모만 들어온다
         if(!st.start && typeof d.start === "number" && GOALS.indexOf(d.goal) >= 0){
           st.goal = d.goal; st.start = d.start; st.freq = Math.min(7, Math.max(0, +d.freq || 0)); st.price = Math.max(0, +d.price || 0);
           st.reason = cleanStr(d.reason, 60); st.attempts = cleanAttempts(d.attempts); st.big = !!d.big;
           document.documentElement.classList.toggle("big", st.big); $("p_big").checked = st.big;
         }
         if(!save()){ st = JSON.parse(before); return; }   // 저장이 안 됐으면 사진도 지우지 않는다
-        gone.forEach(function(m){ mTx("readwrite", function(x){ return x.delete(m.id); }).catch(function(){}); });   // 200건을 넘어 밀려난 사진은 저장이 끝난 뒤에 지운다
         renderLogs(); renderMedia(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
       }catch(e){ toast("금주노트 파일이 아니에요"); }
       $("x_file").value = "";
