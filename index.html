@@ -715,9 +715,10 @@ html.big body{zoom:1.18;}
 
   // ── 사진·바코드 기록 — 이 기기 안에서만. 사진은 다시 그려 EXIF(위치 포함)를 지운 작은 그림만 IndexedDB 에 둔다
   function capMedia(a){   // 200건 한도: 저장한 순서가 오래된 것부터 밀어내고, 남은 것은 촬영 시각 순으로 둔다
-    if(a.length <= 200) return {keep:a, evicted:[]};
+    var bt = function(p, q){ return q.t - p.t; };
+    if(a.length <= 200) return {keep:a.slice().sort(bt), evicted:[]};
     var k = a.slice().sort(function(p, q){ return (q.saved || q.t) - (p.saved || p.t); }).slice(0, 200);
-    return {keep:a.filter(function(x){ return k.indexOf(x) >= 0; }), evicted:a.filter(function(x){ return k.indexOf(x) < 0; })};
+    return {keep:a.filter(function(x){ return k.indexOf(x) >= 0; }).sort(bt), evicted:a.filter(function(x){ return k.indexOf(x) < 0; })};
   }
   function cleanMedia(a){ return (Array.isArray(a) ? a : []).filter(function(m){ return m && typeof m.t === "number" && isFinite(m.t) && typeof m.id === "string" && /^[a-z0-9]{6,24}$/.test(m.id); }).slice(0, 200)
     .map(function(m){ return {id:m.id, t:m.t, saved:(typeof m.saved === "number" ? m.saved : m.t), code:(typeof m.code === "string" && /^[0-9A-Za-z-]{4,32}$/.test(m.code) ? m.code : ""), note:(typeof m.note === "string" ? m.note.slice(0, 40) : "")}; }); }
