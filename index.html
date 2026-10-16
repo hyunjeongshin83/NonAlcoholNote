@@ -90,6 +90,15 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .log .lv.hi{background:#FDEDE9;color:var(--coral);}
 .log .body{flex:1;font-size:0.9375rem;color:var(--ink);line-height:1.4;}
 .log .meta{font-size:0.7812rem;color:var(--d3);margin-top:2px;}
+.ph-row{display:flex;gap:10px;align-items:center;margin:10px 0;}
+.ph-row img{width:84px;height:84px;object-fit:cover;border-radius:12px;border:1px solid var(--line);flex:none;background:var(--g0);}
+.ph-list{list-style:none;margin-top:10px;}
+.ph-list li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);}
+.ph-list li:last-child{border-bottom:none;}
+.ph-list .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;min-width:44px;min-height:44px;}
+.ph-list img{width:56px;height:56px;object-fit:cover;border-radius:10px;flex:none;background:var(--g0);}
+.ph-list .body{flex:1;min-width:0;font-size:0.9375rem;color:var(--ink);overflow-wrap:anywhere;}
+.ph-list .meta{font-size:0.8125rem;color:var(--d3);}
 .log .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;}
 .empty{text-align:center;padding:24px;color:var(--d3);font-size:0.9375rem;background:var(--g0);border-radius:14px;border:1.5px dashed var(--line);}
 .chk{display:flex;align-items:center;gap:10px;font-size:0.9688rem;font-weight:700;color:var(--ink);padding:10px 0;min-height:44px;cursor:pointer;}
@@ -303,6 +312,21 @@ html.big body{zoom:1.18;}
         <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div></div>
       </div>
     </div>
+    <div class="card" id="ph_card">
+      <div class="title" style="font-size:1.375rem">사진·바코드로 남기기</div>
+      <p class="sub">무엇을 마셨는지 사진을 찍어 두면, 사진에 찍힌 <b>촬영 시각</b>으로 기록돼요. 바코드가 보이면 번호도 읽어 와요. 사진은 이 기기에만 남고 서버로 가지 않으며 내보내기에도 들어가지 않아요.</p>
+      <input type="file" id="ph_file" accept="image/*" capture="environment" style="display:none">
+      <button class="btn ghost" id="ph_btn">사진 찍기·고르기</button>
+      <div id="ph_form" style="display:none">
+        <div class="ph-row"><img id="ph_prev" alt="고른 사진 미리보기"><div class="sub" style="margin-top:0">촬영 시각<br><b id="ph_time" style="color:var(--ink)"></b><br><span id="ph_src" style="font-size:0.8125rem"></span></div></div>
+        <div class="fld"><label for="ph_code">바코드 번호 <span style="font-weight:500">(자동으로 읽히면 채워져요 · 직접 적어도 돼요)</span></label><input id="ph_code" inputmode="numeric" maxlength="32" placeholder="예: 8801234567890"></div>
+        <div class="fld"><label for="ph_note">무엇인가요 <span style="font-weight:500">(선택)</span></label><input id="ph_note" maxlength="40" placeholder="예: 퇴근 후 맥주 · 소주 한 병"></div>
+        <div class="row2"><button class="btn ghost" id="ph_cancel">취소</button><button class="btn" id="ph_save">저장</button></div>
+      </div>
+      <p class="disc" id="ph_native" style="display:none;text-align:left">안드로이드 앱에서는 사진 선택기가 아직 없어 이 기능을 웹(브라우저)에서만 쓸 수 있어요.</p>
+      <ul class="ph-list" id="ph_list"></ul>
+      <button class="btn ghost" id="ph_more" type="button" style="display:none;margin-top:8px">더 보기</button>
+    </div>
     <div class="card">
       <div class="sect">지난 기록</div>
       <ul class="log" id="l_list"></ul>
@@ -427,6 +451,7 @@ html.big body{zoom:1.18;}
   var TRIG = ["퇴근 후", "식사 중", "모임·회식", "스트레스", "외로움", "지루함", "주말", "기쁜 일"];
   var COPE = ["물·차 마시기", "심호흡", "산책", "연락하기", "자리 피하기", "간식 먹기"];
   var TIPS = ["찬물이나 차를 천천히 한 잔 마셔 보세요.", "코로 4초 들이쉬고 6초 내쉬기를 다섯 번 해 보세요.", "자리에서 일어나 5분만 걸어 보세요.", "믿는 사람에게 문자 한 줄을 보내 보세요.", "지금 술이 눈에 보이는 곳이라면 다른 곳으로 옮기세요.", "당기는 마음은 파도처럼 올랐다 가라앉아요. 지켜보기만 해도 돼요."];
+  var loadOk = true;   // 기록을 못 읽었으면(깨짐·저장소 막힘) 사진 정리를 하지 않는다
   var st = load();
   // ── 여러 탭 · 기기 안 저장 합치기 — 다른 탭이 방금 저장한 기록을 낡은 상태로 덮어쓰지 않는다 (3-way 합침: 마지막으로 본 저장본 · 내 상태 · 지금 저장된 것)
   delete st._rev; delete st._prev;   // 저장본에 붙는 쓰기 표식(아래)은 상태에는 두지 않는다
@@ -536,16 +561,16 @@ html.big body{zoom:1.18;}
     return {v:1, t:l.t, kind:kind, cups:cups, cr:cr, bev:bev, lv: cr != null ? lvOfCr(cr) : (LV.indexOf(l.lv) >= 0 ? l.lv : null), mood: MOOD.indexOf(l.mood) >= 0 ? l.mood : null, trig: cleanList(l.trig), cope: cleanList(l.cope)};
   }
   function cleanAttempts(a){ return Array.isArray(a) ? a.filter(function(x){ return x && typeof x.start === "number" && typeof x.end === "number"; }).slice(0, 200).map(function(x){ return {start:x.start, end:x.end}; }) : []; }
-  function blank(){ return {v:1, goal:null, start:null, freq:3, price:30000, reason:"", logs:[], attempts:[], big:false}; }
+  function blank(){ return {v:1, goal:null, start:null, freq:3, price:30000, reason:"", logs:[], attempts:[], big:false, media:[]}; }
   var bootRaw = null;
   function load(){
     try{
       var raw = localStorage.getItem(KEY); bootRaw = raw; if(!raw) return blank();
       var o = JSON.parse(raw); var b = blank();
       Object.keys(b).forEach(function(k){ if(o[k] === undefined) o[k] = b[k]; });
-      o.logs = (Array.isArray(o.logs) ? o.logs : []).map(cleanLog).filter(Boolean); o.attempts = cleanAttempts(o.attempts);
+      o.logs = (Array.isArray(o.logs) ? o.logs : []).map(cleanLog).filter(Boolean); o.attempts = cleanAttempts(o.attempts); o.media = cleanMedia(o.media);
       return o;
-    }catch(e){ return blank(); }
+    }catch(e){ loadOk = false; return blank(); }
   }
 
   // ── 토스트 (금연노트와 같은 6초 · 마우스가 위에 있으면 유지)
@@ -579,7 +604,7 @@ html.big body{zoom:1.18;}
     $("tabs").style.display = v === "setup" ? "none" : "";
     if(v === "setup") fillSetup();
     if(v === "start") $("st_go").textContent = st.start ? "메인으로" : "시작하기";
-    if(v === "log") renderLogs();
+    if(v === "log"){ renderLogs(); renderMedia(); }
     if(v === "stats") renderStats();
     if(v === "help") dbBind();
     if(v === "pro") renderPro();
@@ -684,6 +709,152 @@ html.big body{zoom:1.18;}
     if(!window.confirm("이 기록을 지울까요?")) return;
     var rm = st.logs.splice(+b.dataset.i, 1); if(!save()){ st.logs.splice(+b.dataset.i, 0, rm[0]); return; } renderLogs(); toast("지웠어요");
   };
+
+  // ── 사진·바코드 기록 — 이 기기 안에서만. 사진은 다시 그려 EXIF(위치 포함)를 지운 작은 그림만 IndexedDB 에 둔다
+  function cleanMedia(a){ return (Array.isArray(a) ? a : []).filter(function(m){ return m && typeof m.t === "number" && isFinite(m.t) && typeof m.id === "string" && /^[a-z0-9]{6,24}$/.test(m.id); }).slice(0, 200)
+    .map(function(m){ return {id:m.id, t:m.t, saved:(typeof m.saved === "number" ? m.saved : m.t), code:(typeof m.code === "string" && /^[0-9A-Za-z-]{4,32}$/.test(m.code) ? m.code : ""), note:(typeof m.note === "string" ? m.note.slice(0, 40) : "")}; }); }
+  st.media = cleanMedia(st.media);
+  function mOpen(){ return new Promise(function(res, rej){ var r = indexedDB.open("nonalcohol.media", 1); r.onupgradeneeded = function(){ r.result.createObjectStore("thumbs"); }; r.onsuccess = function(){ res(r.result); }; r.onerror = function(){ rej(r.error); }; }); }
+  function mTx(mode, fn){ return mOpen().then(function(d){ return new Promise(function(res, rej){ var t = d.transaction("thumbs", mode), r = fn(t.objectStore("thumbs")); t.oncomplete = function(){ d.close(); res(r && r.result); }; t.onerror = t.onabort = function(){ d.close(); rej(t.error); }; }); }); }
+  function exifTime(buf){   // JPEG 의 촬영 시각(DateTimeOriginal) — 없으면 null
+    try{
+      var v = new DataView(buf); if(v.getUint16(0) !== 0xFFD8) return null;
+      var o = 2;
+      while(o < v.byteLength - 4){
+        var m = v.getUint16(o), len = v.getUint16(o + 2);
+        if(m === 0xFFE1 && v.getUint32(o + 4) === 0x45786966){
+          var t = o + 10, le = v.getUint16(t) === 0x4949;
+          var g16 = function(q){ return v.getUint16(q, le); }, g32 = function(q){ return v.getUint32(q, le); };
+          var ifd = t + g32(t + 4), n = g16(ifd), ptr = null, i, e;
+          for(i = 0; i < n; i++){ e = ifd + 2 + i * 12; if(g16(e) === 0x8769) ptr = g32(e + 8); }
+          if(ptr == null) return null;
+          var ifd2 = t + ptr; n = g16(ifd2);
+          for(i = 0; i < n; i++){
+            e = ifd2 + 2 + i * 12;
+            if(g16(e) === 0x9003){
+              var off = t + g32(e + 8), str = ""; for(var k = 0; k < 19; k++) str += String.fromCharCode(v.getUint8(off + k));
+              var mm = /^(\d{4}):(\d\d):(\d\d) (\d\d):(\d\d):(\d\d)$/.exec(str); if(!mm) return null;
+              var dt = new Date(+mm[1], +mm[2] - 1, +mm[3], +mm[4], +mm[5], +mm[6]);
+              if(dt.getFullYear() !== +mm[1] || dt.getMonth() !== +mm[2] - 1 || dt.getDate() !== +mm[3] || dt.getHours() !== +mm[4] || dt.getMinutes() !== +mm[5] || dt.getSeconds() !== +mm[6]) return null;   // 2월 31일 같은 값이 다음 달로 넘어가 버리는 것을 막는다
+              return dt.getTime();
+            }
+          }
+          return null;
+        }
+        if(m < 0xFF00) break;
+        o += 2 + len;
+      }
+    }catch(e){}
+    return null;
+  }
+  var phCur = null;   // 고른 사진 {t, src, blob}
+  function phReset(){ phTok++; phCur = null; $("ph_form").style.display = "none"; $("ph_file").value = ""; $("ph_code").value = ""; $("ph_note").value = ""; if($("ph_prev").src.indexOf("blob:") === 0) URL.revokeObjectURL($("ph_prev").src); $("ph_prev").removeAttribute("src"); }
+  function fmtT(t){ var d = new Date(t); return (d.getMonth()+1)+"/"+d.getDate()+" "+("0"+d.getHours()).slice(-2)+":"+("0"+d.getMinutes()).slice(-2); }
+  $("ph_btn").onclick = function(){ $("ph_file").click(); };
+  $("ph_cancel").onclick = phReset;
+  var phTok = 0, phSaving = false, phShown = 20;
+  function plausible(t){ var n = Date.now(); return typeof t === "number" && isFinite(t) && t <= n + 300000 && t >= (function(d){ d.setFullYear(d.getFullYear() - 10); return d.getTime(); })(new Date(n)); }
+  function imgDims(buf){   // PNG·WebP·JPEG 가로·세로 — 펼치기 전에 크기를 본다
+    try{ var v = new DataView(buf);
+      if(v.getUint32(0) === 0x89504E47) return {w:v.getUint32(16), h:v.getUint32(20)};
+      if(v.getUint32(0) === 0x52494646 && v.getUint32(8) === 0x57454250){
+        var c = v.getUint32(12);
+        if(c === 0x56503858) return {w:1 + (v.getUint8(24) | v.getUint8(25) << 8 | v.getUint8(26) << 16), h:1 + (v.getUint8(27) | v.getUint8(28) << 8 | v.getUint8(29) << 16)};
+        if(c === 0x56503820) return {w:v.getUint16(26, true) & 0x3FFF, h:v.getUint16(28, true) & 0x3FFF};
+        if(c === 0x5650384C){ var b = v.getUint32(21, true); return {w:1 + (b & 0x3FFF), h:1 + ((b >> 14) & 0x3FFF)}; }
+      }
+    }catch(e){}
+    return jpegDims(buf);
+  }
+  function jpegDims(buf){   // JPEG 가로·세로(SOF) — 그림을 펼치기 전에 너무 큰 사진을 거른다
+    try{ var v = new DataView(buf); if(v.getUint16(0) !== 0xFFD8) return null; var o = 2;
+      while(o < v.byteLength - 9){ var m = v.getUint16(o); if(m >= 0xFFC0 && m <= 0xFFCF && m !== 0xFFC4 && m !== 0xFFC8 && m !== 0xFFCC) return {h:v.getUint16(o+5), w:v.getUint16(o+7)}; if(m < 0xFF00) break; o += 2 + v.getUint16(o+2); } }catch(e){}
+    return null;
+  }
+  $("ph_file").onchange = function(){
+    var f = $("ph_file").files[0]; phTok++; var tok = phTok; phCur = null; $("ph_form").style.display = "none";   // 새로 고르면 이전 사진·진행 중인 읽기는 버린다
+    if(!f) return;
+    if(f.size > 30*1024*1024){ $("ph_file").value = ""; return toast("사진이 너무 커요 (30MB까지)"); }
+    f.arrayBuffer().then(function(buf){
+      if(tok !== phTok) return;
+      var dm = imgDims(buf); if(!dm){ $("ph_file").value = ""; return toast("JPEG·PNG·WebP 사진만 올릴 수 있어요"); }   // 크기를 미리 알 수 없는 형식(GIF·AVIF 등)은 펼치다 멈출 수 있어 받지 않는다
+      if(dm.w * dm.h > 48e6){ $("ph_file").value = ""; return toast("사진 해상도가 너무 커요"); }
+      var ex = exifTime(buf), ok = plausible(ex), mt = plausible(f.lastModified);
+      var t = ok ? ex : (mt ? f.lastModified : Date.now()), src = ok ? "사진에 찍힌 촬영 시각" : (mt ? "파일 수정 시각 (촬영 시각이 없어서)" : "지금 시각 (사진에 믿을 만한 시각이 없어서)");
+      return createImageBitmap(f).then(function(bmp){
+        var k = Math.min(1, 320 / Math.max(bmp.width, bmp.height)), c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+        c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+        var det; try{ det = ("BarcodeDetector" in window) ? new BarcodeDetector().detect(bmp).catch(function(){ return []; }) : Promise.resolve([]); }catch(e){ det = Promise.resolve([]); }   // 바코드 읽기가 던져도 사진 저장은 막지 않는다
+        return Promise.all([new Promise(function(r){ c.toBlob(r, "image/jpeg", 0.7); }), det]).then(function(x){ if(bmp.close) bmp.close(); return {blob:x[0], codes:x[1]}; });
+      }).then(function(r){
+        if(tok !== phTok) return;
+        if(!r.blob) throw new Error("blob");
+        phCur = {t:t, blob:r.blob};
+        if($("ph_prev").src.indexOf("blob:") === 0) URL.revokeObjectURL($("ph_prev").src);
+        $("ph_prev").src = URL.createObjectURL(r.blob); $("ph_time").textContent = fmtT(t); $("ph_src").textContent = src;
+        var code = r.codes && r.codes[0] && r.codes[0].rawValue; $("ph_code").value = (typeof code === "string" && /^[0-9A-Za-z-]{4,32}$/.test(code)) ? code : "";
+        $("ph_form").style.display = "";
+      });
+    }).catch(function(){ if(tok === phTok){ phReset(); toast("사진을 읽지 못했어요"); } });
+  };
+  $("ph_save").onclick = function(){
+    if(!phCur || phSaving) return;
+    var code = $("ph_code").value.trim(); if(code && !/^[0-9A-Za-z-]{4,32}$/.test(code)) return toast("바코드 번호는 숫자·영문 4~32자로 적어 주세요");
+    var note = $("ph_note").value.trim().slice(0, 40), id = Date.now().toString(36) + Math.random().toString(36).slice(2, 8), cur = phCur;   // 누른 순간의 메모·바코드를 잡아 둔다
+    phSaving = true; $("ph_save").disabled = true;
+    mTx("readwrite", function(x){ return x.put(cur.blob, id); }).then(function(){
+      var before = st.media.slice();
+      st.media.unshift({id:id, t:cur.t, saved:Date.now(), code:code, note:note});
+      var evicted = st.media.slice(200); st.media = st.media.slice(0, 200);
+      if(!save()){   // 기록이 안 남았으면 사진도 되돌린다
+        st.media = before;
+        return mTx("readwrite", function(x){ return x.delete(id); }).catch(function(){}).then(function(){ toast("기록을 저장하지 못했어요. 저장 공간을 확인해 주세요"); });
+      }
+      evicted.forEach(function(m){ mTx("readwrite", function(x){ return x.delete(m.id); }).catch(function(){}); });   // 200건을 넘어 밀려난 사진도 지운다
+      if(phCur === cur) phReset();
+      renderMedia(); toast("촬영 시각과 함께 남겼어요");
+    }).catch(function(){ toast("사진을 저장하지 못했어요. 저장 공간을 확인해 주세요"); })
+      .then(function(){ phSaving = false; $("ph_save").disabled = false; });
+  };
+  function renderMedia(){
+    var ul = $("ph_list"); ul.textContent = ""; $("ph_more").style.display = st.media.length > phShown ? "" : "none";
+    st.media.slice(0, phShown).forEach(function(m){
+      var li = document.createElement("li"), im = document.createElement("img"), body = document.createElement("div"), del = document.createElement("button");
+      im.alt = "기록한 사진"; body.className = "body";
+      var h = document.createElement("div"); h.textContent = m.note || "사진 기록"; var mt = document.createElement("div"); mt.className = "meta"; mt.textContent = fmtT(m.t) + (m.code ? " · 바코드 " + m.code : "");
+      body.appendChild(h); body.appendChild(mt);
+      del.className = "del"; del.type = "button"; del.textContent = "×"; del.setAttribute("aria-label", "이 사진 기록 지우기");
+      del.onclick = function(){   // 기록(메타)을 먼저 저장하고, 저장이 되면 사진을 지운다 — 거꾸로 하면 저장이 실패했을 때 빈 사진만 남는다
+        var before = st.media.slice();
+        st.media = st.media.filter(function(y){ return y.id !== m.id; });
+        if(!save()){ st.media = before; return toast("지우지 못했어요. 저장 공간을 확인해 주세요"); }
+        renderMedia();
+        mTx("readwrite", function(x){ return x.delete(m.id); }).catch(function(){   // 사진을 못 지웠으면 기록을 되돌려, 앱에서 다시 지울 수 있게 한다
+          if(!st.media.some(function(y){ return y.id === m.id; })){ st.media.push(m); st.media.sort(function(p, q){ return q.t - p.t; }); save(); }   // 그 사이 새로 들어온 기록은 그대로 두고 지우려던 기록만 돌려놓는다 (200건 한도는 다음 저장 때 다시 맞춘다)
+          renderMedia(); toast("사진을 지우지 못했어요. 다시 눌러 주세요");
+        });
+      };
+      li.appendChild(im); li.appendChild(body); li.appendChild(del); ul.appendChild(li);
+      mTx("readonly", function(s){ return s.get(m.id); }).then(function(b){ if(b){ var u = URL.createObjectURL(b); im.onload = function(){ URL.revokeObjectURL(u); }; im.src = u; } }).catch(function(){});
+    });
+  }
+  $("ph_more").onclick = function(){ phShown += 20; renderMedia(); };
+  // 앱을 열 때 한 번: 기록(메타)에 없는 사진은 지운다 — 삭제가 도중에 끊기거나 한도로 밀려난 사진이 보이지 않게 남는 일을 막는다 (PR #35 Codex)
+  (function sweep(){
+    var kept = false; try{ kept = localStorage.getItem(KEY+".corrupt") != null; }catch(e){ kept = true; }   // 깨진 기록을 보존해 둔 동안에는 복구에 쓸 사진을 남긴다
+    if(!loadOk || kept) return;
+    mTx("readonly", function(x){ return x.getAllKeys(); }).then(function(keys){
+      var live = {}; st.media.forEach(function(m){ live[m.id] = 1; });
+      try{ ((JSON.parse(localStorage.getItem(KEY)) || {}).media || []).forEach(function(m){ if(m && m.id) live[m.id] = 1; }); }catch(e){ return; }   // 다른 탭이 방금 저장한 기록도 본다
+      (keys || []).forEach(function(k){
+        var made = parseInt(String(k).slice(0, 8), 36);   // 아이디 앞머리가 만든 시각 — 10분 안의 것은 다른 탭이 저장 중일 수 있어 건드리지 않는다
+        if(phSaving || live[k] || !(Date.now() - made > 600000)) return;
+        mTx("readwrite", function(x){ return x.delete(k); }).catch(function(){});
+      });
+    }).catch(function(){});
+  })();
+  if(window.Native){ $("ph_btn").style.display = "none"; $("ph_native").style.display = ""; }   // 앱 셸 WebView 에는 사진 선택기가 아직 없다
 
   // ── 통계
   function rank(el, key){
@@ -809,7 +980,7 @@ html.big body{zoom:1.18;}
   });
   var dbLast = 100;
   function afterPull(){   // 다른 탭의 변경을 합친 뒤, 열려 있는 화면을 모두 새로 그린다
-    NADB.invalidate(); renderLogs(); document.documentElement.classList.toggle("big", !!st.big); if($("p_big")) $("p_big").checked = !!st.big;   // 다른 탭에서 바꾼 큰 글씨 설정도 바로 적용 (도움말의 체크 상자까지)
+    NADB.invalidate(); renderLogs(); renderMedia(); document.documentElement.classList.toggle("big", !!st.big); if($("p_big")) $("p_big").checked = !!st.big;   // 다른 탭에서 바꾼 큰 글씨 설정도 바로 적용 (도움말의 체크 상자까지)
     var on = document.querySelector(".view.on"), v = on ? on.id.slice(2) : "";
     if(!st.start && v !== "start" && v !== "setup"){ show("start"); return; }   // 다른 탭에서 목표를 다시 정했으면 이 탭도 시작 화면으로
     if(v === "stats") renderStats();
@@ -904,13 +1075,15 @@ html.big body{zoom:1.18;}
         o.data.logs.map(cleanLog).forEach(function(l){ if(l && !seen[l.t+"|"+l.kind]){ seen[l.t+"|"+l.kind] = 1; st.logs.push(l); added++; } });
         st.logs.sort(function(a,b){ return b.t - a.t; });
         var d = o.data;
+        cleanMedia(d.media).forEach(function(m){ if(!st.media.some(function(x){ return x.id === m.id; })) st.media.push(m); }); st.media.sort(function(a,b){ return b.t - a.t; }); var gone = st.media.slice(200); st.media = st.media.slice(0, 200);   // 사진은 기기 안에만 있어 가져온 기록에는 그림 없이 시각·바코드·메모만 들어온다
         if(!st.start && typeof d.start === "number" && GOALS.indexOf(d.goal) >= 0){
           st.goal = d.goal; st.start = d.start; st.freq = Math.min(7, Math.max(0, +d.freq || 0)); st.price = Math.max(0, +d.price || 0);
           st.reason = cleanStr(d.reason, 60); st.attempts = cleanAttempts(d.attempts); st.big = !!d.big;
           document.documentElement.classList.toggle("big", st.big); $("p_big").checked = st.big;
         }
-        if(!save()){ st = JSON.parse(before); return; }
-        renderLogs(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
+        if(!save()){ st = JSON.parse(before); return; }   // 저장이 안 됐으면 사진도 지우지 않는다
+        gone.forEach(function(m){ mTx("readwrite", function(x){ return x.delete(m.id); }).catch(function(){}); });   // 200건을 넘어 밀려난 사진은 저장이 끝난 뒤에 지운다
+        renderLogs(); renderMedia(); show(st.start ? "home" : "setup"); toast("기록 "+added+"건을 가져왔어요");
       }catch(e){ toast("금주노트 파일이 아니에요"); }
       $("x_file").value = "";
     };
