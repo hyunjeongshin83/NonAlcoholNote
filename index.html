@@ -497,7 +497,10 @@ html.big body{zoom:1.18;}
         [m, t, b].some(function(a){ if(a.length > 1 && typeof a[0].t === "number" && typeof a[a.length - 1].t === "number" && a[0].t !== a[a.length - 1].t){ desc = a[0].t > a[a.length - 1].t; return true; } return false; });   // 기록이 2개 이상 든 쪽의 순서를 따른다
         out.sort(function(p, q){ return desc ? q.t - p.t : p.t - q.t; });
       }
-      if(name === "media") out = out.slice(0, 200);   // 사진 기록 한도 200건
+      if(name === "media" && out.length > 200){   // 사진 기록 한도 200건 — 넘치면 촬영 시각이 아니라 저장한 순서가 오래된 것부터 밀어낸다 (방금 저장한 사진이 오래전에 찍은 사진이라고 잘려 나가지 않게)
+        var keep = out.slice().sort(function(p, q){ return (q.saved || q.t) - (p.saved || p.t); }).slice(0, 200);
+        out = out.filter(function(x){ return keep.indexOf(x) >= 0; });
+      }
       return out;
     }
     if(m && t && b && typeof m === "object" && typeof t === "object" && typeof b === "object" && !Array.isArray(m) && !Array.isArray(t) && !Array.isArray(b)){
