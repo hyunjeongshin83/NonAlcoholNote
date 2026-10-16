@@ -714,6 +714,11 @@ html.big body{zoom:1.18;}
   };
 
   // ── 사진·바코드 기록 — 이 기기 안에서만. 사진은 다시 그려 EXIF(위치 포함)를 지운 작은 그림만 IndexedDB 에 둔다
+  function capMedia(a){   // 200건 한도: 저장한 순서가 오래된 것부터 밀어내고, 남은 것은 촬영 시각 순으로 둔다
+    if(a.length <= 200) return {keep:a, evicted:[]};
+    var k = a.slice().sort(function(p, q){ return (q.saved || q.t) - (p.saved || p.t); }).slice(0, 200);
+    return {keep:a.filter(function(x){ return k.indexOf(x) >= 0; }), evicted:a.filter(function(x){ return k.indexOf(x) < 0; })};
+  }
   function cleanMedia(a){ return (Array.isArray(a) ? a : []).filter(function(m){ return m && typeof m.t === "number" && isFinite(m.t) && typeof m.id === "string" && /^[a-z0-9]{6,24}$/.test(m.id); }).slice(0, 200)
     .map(function(m){ return {id:m.id, t:m.t, saved:(typeof m.saved === "number" ? m.saved : m.t), code:(typeof m.code === "string" && /^[0-9A-Za-z-]{4,32}$/.test(m.code) ? m.code : ""), note:(typeof m.note === "string" ? m.note.slice(0, 40) : "")}; }); }
   st.media = cleanMedia(st.media);
@@ -809,7 +814,7 @@ html.big body{zoom:1.18;}
     mTx("readwrite", function(x){ return x.put(cur.blob, id); }).then(function(){
       var before = st.media.slice();
       st.media.unshift({id:id, t:cur.t, saved:Date.now(), code:code, note:note});
-      var evicted = st.media.slice(200); st.media = st.media.slice(0, 200);
+      var cp = capMedia(st.media), evicted = cp.evicted; st.media = cp.keep;
       if(!save()){   // 기록이 안 남았으면 사진도 되돌린다
         st.media = before;
         return mTx("readwrite", function(x){ return x.delete(id); }).catch(function(){}).then(function(){ toast("기록을 저장하지 못했어요. 저장 공간을 확인해 주세요"); });
@@ -1078,7 +1083,7 @@ html.big body{zoom:1.18;}
         o.data.logs.map(cleanLog).forEach(function(l){ if(l && !seen[l.t+"|"+l.kind]){ seen[l.t+"|"+l.kind] = 1; st.logs.push(l); added++; } });
         st.logs.sort(function(a,b){ return b.t - a.t; });
         var d = o.data;
-        cleanMedia(d.media).forEach(function(m){ if(!st.media.some(function(x){ return x.id === m.id; })) st.media.push(m); }); st.media.sort(function(a,b){ return b.t - a.t; }); var gone = st.media.slice(200); st.media = st.media.slice(0, 200);   // 사진은 기기 안에만 있어 가져온 기록에는 그림 없이 시각·바코드·메모만 들어온다
+        cleanMedia(d.media).forEach(function(m){ if(!st.media.some(function(x){ return x.id === m.id; })) st.media.push(m); }); st.media.sort(function(a,b){ return b.t - a.t; }); var cp2 = capMedia(st.media), gone = cp2.evicted; st.media = cp2.keep;   // 사진은 기기 안에만 있어 가져온 기록에는 그림 없이 시각·바코드·메모만 들어온다
         if(!st.start && typeof d.start === "number" && GOALS.indexOf(d.goal) >= 0){
           st.goal = d.goal; st.start = d.start; st.freq = Math.min(7, Math.max(0, +d.freq || 0)); st.price = Math.max(0, +d.price || 0);
           st.reason = cleanStr(d.reason, 60); st.attempts = cleanAttempts(d.attempts); st.big = !!d.big;
