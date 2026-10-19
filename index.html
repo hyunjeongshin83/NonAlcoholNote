@@ -655,7 +655,7 @@ html.big body{zoom:1.18;}
     $("h_reason_card").style.display = st.reason ? "" : "none"; $("h_reason").textContent = st.reason || "";
   }
   var homeDay = null;
-  setInterval(function(){ if($("v-home").classList.contains("on")){ tick(); var d = new Date().toDateString(); if(homeDay !== null && homeDay !== d) renderMain(); homeDay = d; } }, 1000);   // 자정을 넘기면 오늘 할 일·최근 기록도 새로 그린다
+  setInterval(function(){ if($("v-home").classList.contains("on")){ greetNow(); tick(); var d = new Date().toDateString(); if(homeDay !== null && homeDay !== d) renderMain(); homeDay = d; } }, 1000);   // 자정을 넘기면 오늘 할 일·최근 기록도 새로 그린다
 
   // ── 설정
   var goalChips = chips("s_goal", GOALS, false);
