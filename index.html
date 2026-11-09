@@ -658,10 +658,10 @@ html.big body{zoom:1.18;}
     var h = new Date().getHours();
     $("h_greet").textContent = h < 5 ? "늦은 밤이에요" : h < 12 ? "좋은 아침이에요" : h < 18 ? "좋은 오후예요" : "편안한 저녁이에요";
   }
-  function show(v){
+  var navOn = false, navCur = null, skipPop = 0;   // 기기·브라우저 「뒤로」 — 화면마다 기록을 한 칸씩 쌓아 두고, 뒤로 가면 앞 화면으로 (앱 밖으로 바로 나가지 않게)
+  function show(v, fromPop){
     document.querySelectorAll(".view").forEach(function(s){ s.classList.toggle("on", s.id === "v-"+v); });
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
-    $("tabs").style.display = v === "setup" ? "none" : "";
     if(v === "setup") fillSetup();
     if(v === "start") $("st_go").textContent = st.start ? "메인으로" : "시작하기";
     if(v === "log"){ renderLogs(); renderMedia(); }
@@ -670,7 +670,18 @@ html.big body{zoom:1.18;}
     if(v === "pro") renderPro();
     if(v === "home"){ greetNow(); tick(); renderMain(); }
     window.scrollTo(0,0);
+    if(navOn && !fromPop && v !== navCur){ try{ history.pushState({v: v}, ""); }catch(e){} }
+    navCur = v;
   }
+  window.addEventListener("popstate", function(e){
+    if(skipPop){ skipPop--; return; }
+    if($("sos").classList.contains("on")){ closeSos(true); if(!(e.state && e.state.sos)) return; }   // 5분 버티기가 열려 있으면 뒤로 = 닫기
+    var v = e.state && e.state.v; if(!v) return;
+    if(st.start && v === "setup") v = "home";                              // 시작한 뒤에는 설정 화면으로 돌아가지 않는다
+    else if(!st.start && v !== "start" && v !== "setup") v = "start";      // 시작 전에는 시작 화면까지만
+    show(v, true);
+    try{ history.replaceState({v: v}, ""); }catch(er){}
+  });
   document.getElementById("tabs").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; if(b.dataset.v === "start" || b.dataset.v === "help" || st.start) show(b.dataset.v); else show("setup"); };
   $("s_back").onclick = function(){ show(st.start ? "help" : "start"); };
   $("st_go").onclick = function(){ show(st.start ? "home" : "setup"); };
@@ -1090,6 +1101,7 @@ html.big body{zoom:1.18;}
   $("h_sos").onclick = function(ev){
     var deadline = Date.now() + 300000, ti = 0, lastTip = -1;
     if(!$("sos").classList.contains("on")) sosOpener = (ev && ev.currentTarget) || document.activeElement;
+    if(!$("sos").classList.contains("on")){ try{ history.pushState({v: navCur, sos: 1}, ""); }catch(er){} }
     $("sos").classList.add("on"); $("sos_card").focus();
     function step(){   // 남은 시간은 끝나는 시각에서 계산 — 화면이 꺼졌다 켜져도 실제 시간과 맞는다
       var left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
@@ -1100,8 +1112,9 @@ html.big body{zoom:1.18;}
     }
     sosStep = step; clearInterval(sosTimer); step(); sosTimer = setInterval(step, 1000);
   };
-  function closeSos(){
+  function closeSos(fromPop){
     clearInterval(sosTimer); $("sos").classList.remove("on");
+    if(fromPop !== true && history.state && history.state.sos){ skipPop++; try{ history.back(); }catch(er){ skipPop--; } }   // 단추로 닫으면 쌓아 둔 한 칸도 같이 되돌린다
     var o = (sosOpener && sosOpener.offsetParent) ? sosOpener : (document.querySelector("#tabs button.on") || $("h_sos"));
     sosOpener = null; if(o && o.focus) o.focus();
   }
@@ -1179,6 +1192,7 @@ html.big body{zoom:1.18;}
     show(["start","home","log","stats","help"].indexOf(tab) >= 0 ? tab : "home");
     if(q.get("sos") === "1") $("h_sos").onclick();
   }
+  try{ history.replaceState({v: navCur}, ""); navOn = true; }catch(e){}
   if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(function(){});
 })();
 </script>
