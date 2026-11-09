@@ -383,3 +383,13 @@ test("올리는 동안 이 탭의 기록이 달라졌으면(다른 탭 변경 �
     assert.ok(planned.length >= 1, "올린 것이 낡았으니 다시 예약");
   } finally { globalThis.setTimeout = real; }
 });
+
+test("따라잡기 표지는 기록 내용 전체를 본다 — 수·가장 늦은 시각이 같아도 내용이 다르면 다르다 (Codex P2)", () => {
+  const a = state(), b = state(), c = state();
+  assert.equal(R._sigOf(a), R._sigOf(b), "같은 내용이면 같다");
+  b.logs[2] = { ...b.logs[2], cups: 5, bev: "맥주" };                   // 가장 오래된 기록의 양·술 종류만 다름 (기록 수 · 가장 늦은 시각 같음)
+  assert.equal(a.logs.length, b.logs.length); assert.notEqual(R._sigOf(a), R._sigOf(b));
+  c.attempts = [{ start: at(2026, 10, 21, 9), end: at(2026, 10, 25, 9) }];   // 시도 경계만 다름
+  assert.notEqual(R._sigOf(a), R._sigOf(c));
+  const d = state(); d.reason = "다른 글"; assert.equal(R._sigOf(a), R._sigOf(d), "내보내지 않는 글이 바뀐 것은 무시");
+});

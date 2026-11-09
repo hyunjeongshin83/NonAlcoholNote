@@ -313,11 +313,12 @@
   // ── 동기화 · 켜기/끄기 ─────────────────────────────────────────────────────────────────
   var getSt = function () { return {}; }, onChange = function () {}, busy = false, lastRun = 0, dirty = false;   // dirty: 올리는 중에 기록이 또 바뀜 — 끝난 뒤 한 번 더 올린다
 
-  // 내보낸 내용이 바뀌었는지 가려내는 표지 (기록 수 · 가장 늦은 기록 · 시작일 · 시도 수 · 목표 · 횟수 · 가격) — 앱을 닫아 예약이 사라졌어도 다음에 열 때 따라잡게 한다
+  // 내보낸 내용이 바뀌었는지 가려내는 표지 — 엑셀에 들어가는 표(참여자 · 기록 · 일별)의 내용 전체를 해시한다. 요약값(기록 수 · 가장 늦은 시각 등)만 보면
+  // 오래된 기록을 지우고 다른 기록을 가져와도 같게 나와 따라잡기가 빠졌다 (Codex P2). 시각(exported_at)은 빼서 같은 내용이면 같은 값이 나온다.
+  function fnv(str) { var h = 0x811c9dc5, i; for (i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16); }
   function sigOf(st) {
-    var logs = (st && st.logs) || [], mx = 0, i;
-    for (i = 0; i < logs.length; i++) if (logs[i] && isNum(logs[i].t) && logs[i].t > mx) mx = logs[i].t;
-    return [logs.length, mx, st && st.start, ((st && st.attempts) || []).length, st && st.goal, st && st.freq, st && st.price].join("|");
+    var part = buildParticipant(st || {}, "x", 0); part[1][part[0].indexOf("exported_at_utc")] = "";
+    return fnv(JSON.stringify([part, buildRecords(st || {}, "x"), buildDaily(st || {}, "x", Date.now())]));
   }
   function sync(interactive) {
     if (!consented()) return Promise.resolve({ ok: false, why: "off" });
@@ -400,5 +401,5 @@
 
   return { config: config, state: readState, consented: consented, init: init, touch: touch, sync: sync, enable: enable, disable: disable, reset: reset, deleteRemote: deleteRemote,
     buildSheets: buildSheets, buildRecords: buildRecords, buildDaily: buildDaily, buildCodebook: buildCodebook, toXlsx: toXlsx, newPid: newPid,
-    CODEBOOK_VERSION: CODEBOOK_VERSION, _crc32: crc32 };
+    CODEBOOK_VERSION: CODEBOOK_VERSION, _crc32: crc32, _sigOf: sigOf };
 });
