@@ -393,3 +393,20 @@ test("따라잡기 표지는 기록 내용 전체를 본다 — 수·가장 늦�
   assert.notEqual(R._sigOf(a), R._sigOf(c));
   const d = state(); d.reason = "다른 글"; assert.equal(R._sigOf(a), R._sigOf(d), "내보내지 않는 글이 바뀐 것은 무시");
 });
+
+test("파일을 찾고 만들고 덮어쓰는 구간은 Web Locks 로 탭 사이에 직렬화된다 (Codex P2)", async () => {
+  const order = []; let held = 0, maxHeld = 0;
+  const q = []; let running = false;
+  const origNav = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", { configurable: true, writable: true, value: { locks: { request: (name, fn) => new Promise((res, rej) => {
+    const run = async () => { running = true; held++; maxHeld = Math.max(maxHeld, held); order.push("lock:" + name);
+      try { res(await fn()); } catch (e) { rej(e); } finally { held--; running = false; const nx = q.shift(); if (nx) nx(); } };
+    if (running) q.push(run); else run();
+  }) } } });
+  try {
+    const f = fresh({ tokenDelay: 5, uploadDelay: 40 }); const r = await f.R.enable();
+    assert.equal(r.ok, true); assert.ok(order.includes("lock:nonalcohol-research-sync"), "잠금을 썼다");
+    assert.equal(maxHeld, 1);
+    assert.equal(f.R.state().fileId, "F1", "잠금 안에서 파일 id 가 남는다");
+  } finally { if (origNav) Object.defineProperty(globalThis, "navigator", origNav); else delete globalThis.navigator; }
+});

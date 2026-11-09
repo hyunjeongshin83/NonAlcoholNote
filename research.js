@@ -320,6 +320,13 @@
     var part = buildParticipant(st || {}, "x", 0); part[1][part[0].indexOf("exported_at_utc")] = "";
     return fnv(JSON.stringify([part, buildRecords(st || {}, "x"), buildDaily(st || {}, "x", Date.now())]));
   }
+  // 탭 사이 직렬화: 파일을 찾고·만들고·덮어쓰는 구간은 한 번에 한 탭만 (Web Locks). 기다리던 탭은 앞 탭이 남긴 파일 id 를 읽고 이어서 하므로,
+  // 참여자가 Drive 에서 파일을 지운 뒤 두 탭이 동시에 404 를 받아 파일을 둘 만드는 일이 없다. Web Locks 가 없는 브라우저는 그대로 진행한다.
+  function withLock(fn) {
+    var nav = root.navigator;
+    if (nav && nav.locks && typeof nav.locks.request === "function") return nav.locks.request("nonalcohol-research-sync", fn);
+    return fn();
+  }
   function sync(interactive) {
     if (!consented()) return Promise.resolve({ ok: false, why: "off" });
     if (busy) { dirty = true; return Promise.resolve({ ok: false, why: "busy" }); }   // 올리는 중이면 이 변경이 빠지지 않게 표시만 해 둔다
@@ -327,8 +334,9 @@
     var my = epoch, sig = "", alive = function () { return my === epoch && consented(); };
     var done = function () { if (my === epoch) busy = false; };
     return getToken(!!interactive).then(function (tk) {
+      return withLock(function () {
       if (!alive()) throw stopErr();
-      var s = readState();
+      var s = readState();   // 잠금을 얻은 뒤에 읽는다 — 다른 탭이 방금 남긴 파일 id 를 본다
       return (s.fileId ? Promise.resolve(s.fileId) : findFile(tk, my, s.pid)).then(function (id) {
         if (!alive()) throw stopErr();   // 로그인·조회를 기다리는 사이 꺼졌거나 동의 문구가 바뀌었으면 보내지 않는다
         var snap = getSt(); sig = sigOf(snap);
@@ -337,6 +345,10 @@
           if (id && e.status === 404) return upload(tk, bytes, null, my, s.pid);   // 참여자가 Drive 에서 파일을 지웠으면 새로 만든다
           throw e;
         });
+      }).then(function (id) {
+        if (my === epoch) { var n0 = readState(); n0.fileId = id; writeState(n0); }   // 잠금을 놓기 전에 파일 id 를 남긴다 (기다리는 탭이 이어서 쓰게)
+        return id;
+      });
       });
     }).then(function (id) {
       if (my !== epoch) return { ok: false, why: "off" };   // 올리는 도중에 지우기·끄기를 했다면 상태를 되살리지 않는다
