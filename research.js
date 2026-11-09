@@ -1,0 +1,384 @@
+/* 연구용 Drive 저장 — 기록을 수치로 바꿔 엑셀(.xlsx)로 만들고, 참여자 본인의 Google Drive 에 올립니다. (금연노트 research.js 와 같은 구조)
+ *
+ * 기본값은 꺼짐입니다 (research-config.js). 꺼져 있거나 설정이 비어 있으면 이 파일은 아무 데도 접속하지 않습니다.
+ * 켜져도 참여자가 동의 화면에서 직접 켜야 하고, 켜기 전에는 Google 스크립트도 불러오지 않습니다.
+ *
+ * 순수 로직(수치화 · 엑셀 만들기)은 화면 없이 node 에서도 돕니다 — tests/research.test.mjs.
+ * 저장: localStorage 키 "nonalcohol.research.v1" 한 곳. 기존 기록 키(nonalcohol.v1)는 건드리지 않습니다.
+ * 토큰은 메모리에만 둡니다 (저장하지 않음). 이름·연락처·「나의 이유」 같은 글과 사진은 파일에 넣지 않습니다.
+ */
+(function (root, factory) {
+  if (typeof module === "object" && module.exports) module.exports = factory(root);
+  else root.Research = factory(root);
+})(typeof window !== "undefined" ? window : globalThis, function (root) {
+  "use strict";
+
+  var CODEBOOK_VERSION = "1";
+  var DAY = 86400000;
+  var STORE_KEY = "nonalcohol.research.v1";
+  var SCOPE = "https://www.googleapis.com/auth/drive.file";
+  var XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+  // ── 코드 정의 (앱 index.html 의 GOALS · LV · MOOD · TRIG · COPE · BEV 와 같은 순서) ─────────────
+  var GOALS = ["술 끊기", "술 줄이기"];
+  var LV = ["약함", "보통", "강함"];
+  var MOOD = ["좋음", "보통", "나쁨"];
+  var TRIG = [
+    ["trig_after_work", "퇴근 후"], ["trig_meal", "식사 중"], ["trig_gathering", "모임·회식"], ["trig_stress", "스트레스"],
+    ["trig_lonely", "외로움"], ["trig_boredom", "지루함"], ["trig_weekend", "주말"], ["trig_happy", "기쁜 일"]
+  ];
+  var COPE = [
+    ["cope_water", "물·차 마시기"], ["cope_breath", "심호흡"], ["cope_walk", "산책"], ["cope_contact", "연락하기"],
+    ["cope_leave", "자리 피하기"], ["cope_snack", "간식 먹기"]
+  ];
+  // 술 종류 코드 · 1회 분량(ml) · 도수(%) — 앱의 BEV 와 같은 값. 알코올 g = ml × 도수% × 0.789 × 잔 수 (대략)
+  var BEV = [["소주", 50, 17], ["맥주", 355, 4.5], ["와인", 150, 12], ["막걸리", 200, 6], ["양주", 30, 40]];
+
+  // ── 날짜 도우미 (앱의 dayKey 와 같은 규칙: 기기의 현지 시각) ─────────────────────────────────
+  function p2(n) { return ("0" + n).slice(-2); }
+  function dkey(t) { var d = new Date(t); return d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate()); }
+  // 달력 날짜 차이 (시각이 아니라 날짜로 센다 — 일별 시트의 day_index 와 같은 기준)
+  function calDays(from, to) { return Math.round((new Date(dkey(to) + "T12:00:00").getTime() - new Date(dkey(from) + "T12:00:00").getTime()) / DAY); }
+  function isNum(x) { return typeof x === "number" && isFinite(x); }
+  function has(list, x) { return list.indexOf(x) >= 0; }
+  function bevIdx(k) { for (var i = 0; i < BEV.length; i++) if (BEV[i][0] === k) return i; return -1; }
+  function gramsOf(k, cups) { var i = bevIdx(k); return i < 0 || !isNum(cups) ? null : Math.round(BEV[i][1] * BEV[i][2] / 100 * 0.789 * cups * 10) / 10; }
+
+  // ── 시도(attempt) 찾기 ─────────────────────────────────────────────────────────────────
+  function attemptOf(st, t) {
+    var at = st.attempts || [], i;
+    for (i = 0; i < at.length; i++) { if (isNum(at[i].start) && isNum(at[i].end) && t >= at[i].start && t <= at[i].end) return { n: i + 1, start: at[i].start }; }
+    if (isNum(st.start) && t >= st.start) return { n: at.length + 1, start: st.start };
+    return null;
+  }
+
+  // ── 표 만들기 ──────────────────────────────────────────────────────────────────────────
+  function recordsHeader() {
+    var h = ["participant_id", "rec_no", "date", "hour", "weekday", "attempt_no", "day_of_attempt", "kind", "cups", "beverage", "alcohol_g_est", "craving_0_10", "craving_level", "mood"];
+    TRIG.forEach(function (t) { h.push(t[0]); }); h.push("trig_none");
+    COPE.forEach(function (c) { h.push(c[0]); }); h.push("cope_none");
+    h.push("record_version");
+    return h;
+  }
+
+  function buildRecords(st, pid) {
+    var logs = (st.logs || []).filter(function (r) { return r && isNum(r.t); }).slice().sort(function (a, b) { return a.t - b.t; });
+    var rows = [recordsHeader()];
+    logs.forEach(function (r, i) {
+      var d = new Date(r.t), a = attemptOf(st, r.t), trig = Array.isArray(r.trig) ? r.trig : [], cope = Array.isArray(r.cope) ? r.cope : [], drink = r.kind === "drink";
+      var bi = drink ? bevIdx(r.bev) : -1, g = drink ? gramsOf(r.bev, r.cups) : null;
+      var row = [pid, i + 1, dkey(r.t), d.getHours(), d.getDay(), a ? a.n : "", a ? calDays(a.start, r.t) : "",
+        drink ? 2 : 1, drink && isNum(r.cups) ? r.cups : "", bi >= 0 ? bi + 1 : "", g == null ? "" : g,
+        isNum(r.cr) && r.cr >= 0 && r.cr <= 10 ? r.cr : "", LV.indexOf(r.lv) >= 0 ? LV.indexOf(r.lv) + 1 : "", MOOD.indexOf(r.mood) >= 0 ? MOOD.indexOf(r.mood) + 1 : ""];
+      var any = 0, anyC = 0;
+      TRIG.forEach(function (t) { var on = has(trig, t[1]) ? 1 : 0; any += on; row.push(on); });
+      row.push(any ? 0 : 1);
+      COPE.forEach(function (c) { var on = has(cope, c[1]) ? 1 : 0; anyC += on; row.push(on); });
+      row.push(anyC ? 0 : 1);
+      row.push(r.v === 1 ? 1 : 1);
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  function buildDaily(st, pid, now) {
+    var logs = (st.logs || []).filter(function (r) { return r && isNum(r.t); });
+    var rows = [["participant_id", "date", "day_index", "n_urges_held", "n_drinks", "cups_total", "alcohol_g_est", "craving_mean_0_10", "dry_day"]];
+    var times = logs.map(function (r) { return r.t; });
+    if (isNum(st.start)) times.push(st.start);
+    if (!times.length) return rows;
+    var first = Math.min.apply(null, times), last = Math.max(Math.max.apply(null, times), now || Date.now());
+    var by = {};
+    logs.forEach(function (r) { var k = dkey(r.t); (by[k] = by[k] || []).push(r); });
+    var startKey = isNum(st.start) ? dkey(st.start) : null;
+    var t = new Date(dkey(first) + "T12:00:00").getTime(), guard = 0;
+    while (dkey(t) <= dkey(last) && guard++ < 800) {
+      var k = dkey(t), L = by[k] || [], drinks = L.filter(function (r) { return r.kind === "drink"; }), urges = L.length - drinks.length;
+      var cr = L.filter(function (r) { return isNum(r.cr) && r.cr >= 0 && r.cr <= 10; }).map(function (r) { return r.cr; });
+      var cups = drinks.reduce(function (a, r) { return a + (isNum(r.cups) ? r.cups : 0); }, 0);
+      var gs = drinks.map(function (r) { return gramsOf(r.bev, r.cups); }).filter(function (x) { return x != null; });
+      var gTotal = gs.length ? Math.round(gs.reduce(function (a, b) { return a + b; }, 0) * 10) / 10 : "";
+      rows.push([pid, k, startKey && k >= startKey ? calDays(st.start, new Date(k + "T12:00:00").getTime()) : "",
+        urges, drinks.length, drinks.length ? cups : "", gTotal, cr.length ? Math.round(cr.reduce(function (a, b) { return a + b; }, 0) / cr.length * 100) / 100 : "", drinks.length ? 0 : 1]);
+      t += DAY;
+    }
+    return rows;
+  }
+
+  function buildParticipant(st, pid, now) {
+    return [["participant_id", "goal", "baseline_drink_days_per_week", "price_per_drink_won", "start_date", "n_attempts", "exported_at_utc", "codebook_version"],
+      [pid, GOALS.indexOf(st.goal) >= 0 ? GOALS.indexOf(st.goal) + 1 : "", isNum(st.freq) ? st.freq : "", isNum(st.price) ? st.price : "", isNum(st.start) ? dkey(st.start) : "",
+        (st.attempts || []).length + (isNum(st.start) ? 1 : 0), new Date(now || Date.now()).toISOString(), CODEBOOK_VERSION]];
+  }
+
+  function buildCodebook() {
+    var R = [["sheet", "column", "meaning", "values"]];
+    var s = function (sheet, col, meaning, values) { R.push([sheet, col, meaning, values || ""]); };
+    s("participant", "participant_id", "연구용 무작위 번호 (이름·연락처와 무관). 이 기기에서 처음 켤 때 만들어짐", "P-xxxxxxxx");
+    s("participant", "goal", "목표", "1 술 끊기 · 2 술 줄이기 · 빈칸 미설정");
+    s("participant", "baseline_drink_days_per_week", "평소 일주일에 마신 날 수", "0~7");
+    s("participant", "price_per_drink_won", "한 번 술값(원)", "숫자");
+    s("participant", "start_date", "현재 시도의 시작일", "YYYY-MM-DD");
+    s("participant", "n_attempts", "지금까지의 시도 횟수 (현재 시도 포함)", "숫자");
+    s("records", "rec_no", "기록 순번 (시간순)", "1부터");
+    s("records", "date · hour · weekday", "기록한 날짜 · 시(0~23) · 요일", "weekday 0 일요일 … 6 토요일");
+    s("records", "attempt_no · day_of_attempt", "몇 번째 시도인지 · 그 시도 시작일부터 달력으로 며칠째", "숫자 (시작한 날 0)");
+    s("records", "kind", "기록 종류", "1 마시고 싶었는데 넘김 · 2 마심");
+    s("records", "cups", "마신 잔(캔) 수 — 마심 기록만", "숫자 · 넘김은 빈칸");
+    s("records", "beverage", "술 종류 — 마심 기록만", "1 소주 · 2 맥주 · 3 와인 · 4 막걸리 · 5 양주 · 빈칸 종류 모름");
+    s("records", "alcohol_g_est", "순수 알코올 대략 g = 대표 분량(ml) × 도수(%) × 0.789 × 잔 수. 음료마다 달라 「대략」이며 기준·권고량이 아님", "숫자 · 종류 모르면 빈칸");
+    s("records", "craving_0_10", "마시고 싶은 정도 (0 전혀 ~ 10 가장 심함)", "0~10 · 빈칸 미입력");
+    s("records", "craving_level", "예전 3단계 (0~3 약함 · 4~6 보통 · 7~10 강함)", "1 약함 · 2 보통 · 3 강함 · 빈칸 미입력");
+    s("records", "mood", "그때 기분", "1 좋음 · 2 보통 · 3 나쁨 · 빈칸 미입력");
+    TRIG.forEach(function (t) { s("records", t[0], "상황: " + t[1] + " (여러 개 가능)", "1 해당 · 0 아님"); });
+    s("records", "trig_none", "상황을 하나도 고르지 않음", "1 · 0");
+    COPE.forEach(function (c) { s("records", c[0], "넘긴 방법: " + c[1] + " (여러 개 가능)", "1 해당 · 0 아님"); });
+    s("records", "cope_none", "넘긴 방법을 하나도 고르지 않음", "1 · 0");
+    s("records", "record_version", "앱의 기록 형식", "1");
+    s("daily", "day_index", "시작일 기준 며칠째", "0 이 시작일. 시작 전은 빈칸");
+    s("daily", "n_urges_held · n_drinks", "그날 넘긴 기록 수 · 마신 기록 수", "숫자");
+    s("daily", "cups_total · alcohol_g_est", "그날 마신 잔 수 합 · 알코올 대략 g 합(종류를 아는 기록만)", "숫자 · 안 마신 날 잔 수는 빈칸");
+    s("daily", "craving_mean_0_10", "그날 마시고 싶은 정도 평균", "숫자 · 기록 없으면 빈칸");
+    s("daily", "dry_day", "그날 마신 기록이 없음 (기록을 안 한 날도 1 — 안 마셨다는 뜻이 아니라 마신 기록이 없다는 뜻)", "1 · 0");
+    s("(제외)", "이름·연락처·나의 이유·사진", "자유로 적은 글과 사진은 파일에 넣지 않습니다", "");
+    return R;
+  }
+
+  function buildSheets(st, pid, now) {
+    return [
+      { name: "participant", rows: buildParticipant(st, pid, now) },
+      { name: "records", rows: buildRecords(st, pid) },
+      { name: "daily", rows: buildDaily(st, pid, now) },
+      { name: "codebook", rows: buildCodebook() }
+    ];
+  }
+
+  // ── .xlsx 만들기 (외부 라이브러리 없이: 압축 없는 zip + 최소 SpreadsheetML) ─────────────────
+  var CRC = (function () { var t = [], c, n, k; for (n = 0; n < 256; n++) { c = n; for (k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(b) { var c = 0xFFFFFFFF, i; for (i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function utf8(s) { return new TextEncoder().encode(s); }
+  function esc(s) { return String(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function colName(i) { var s = ""; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+
+  function sheetXml(rows) {
+    var out = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'];
+    rows.forEach(function (row, r) {
+      out.push('<row r="' + (r + 1) + '">');
+      row.forEach(function (v, c) {
+        if (v === "" || v == null) return;
+        var ref = colName(c) + (r + 1);
+        if (typeof v === "number") { if (isFinite(v)) out.push('<c r="' + ref + '"><v>' + v + "</v></c>"); }
+        else out.push('<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + "</t></is></c>");
+      });
+      out.push("</row>");
+    });
+    out.push("</sheetData></worksheet>");
+    return out.join("");
+  }
+
+  function zipStore(files) {
+    var parts = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var name = utf8(f.name), data = f.data, crc = crc32(data);
+      var lh = new DataView(new ArrayBuffer(30)); lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+      lh.setUint16(10, 0, true); lh.setUint16(12, 0x0021, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+      lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), name, data);
+      var ch = new DataView(new ArrayBuffer(46)); ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+      ch.setUint16(10, 0, true); ch.setUint16(12, 0, true); ch.setUint16(14, 0x0021, true); ch.setUint32(16, crc, true); ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true);
+      ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), name);
+      offset += 30 + name.length + data.length;
+    });
+    var cdSize = central.reduce(function (a, b) { return a + b.length; }, 0);
+    var end = new DataView(new ArrayBuffer(22)); end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+    var all = parts.concat(central, [new Uint8Array(end.buffer)]), total = all.reduce(function (a, b) { return a + b.length; }, 0), out = new Uint8Array(total), p = 0;
+    all.forEach(function (b) { out.set(b, p); p += b.length; });
+    return out;
+  }
+
+  function toXlsx(sheets) {
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>';
+    var wb = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>';
+    var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+    var files = [];
+    sheets.forEach(function (s, i) {
+      var n = i + 1;
+      ct += '<Override PartName="/xl/worksheets/sheet' + n + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+      wb += '<sheet name="' + esc(s.name) + '" sheetId="' + n + '" r:id="rId' + n + '"/>';
+      rels += '<Relationship Id="rId' + n + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + n + '.xml"/>';
+      files.push({ name: "xl/worksheets/sheet" + n + ".xml", data: utf8(sheetXml(s.rows)) });
+    });
+    ct += "</Types>"; wb += "</sheets></workbook>"; rels += "</Relationships>";
+    var root0 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    return zipStore([{ name: "[Content_Types].xml", data: utf8(ct) }, { name: "_rels/.rels", data: utf8(root0) }, { name: "xl/workbook.xml", data: utf8(wb) }, { name: "xl/_rels/workbook.xml.rels", data: utf8(rels) }].concat(files));
+  }
+
+  function newPid() {
+    var a = new Uint8Array(4); (root.crypto || {}).getRandomValues ? root.crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); });
+    return "P-" + Array.prototype.map.call(a, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+  }
+
+  // ── 설정 · 동의 상태 ──────────────────────────────────────────────────────────────────
+  function config() {
+    var c = root.NA_RESEARCH_CONFIG || {};
+    var ready = c.enabled === true && typeof c.clientId === "string" && c.clientId.length > 10 && typeof c.consentText === "string" && c.consentText.trim().length > 0 && typeof c.consentVersion === "string" && c.consentVersion.length > 0;
+    return { enabled: c.enabled === true, ready: ready, clientId: c.clientId || "", consentText: c.consentText || "", consentVersion: c.consentVersion || "", irb: c.irb || "" };
+  }
+  function readState() { try { return JSON.parse(root.localStorage.getItem(STORE_KEY)) || {}; } catch (e) { return {}; } }
+  function writeState(s) { try { root.localStorage.setItem(STORE_KEY, JSON.stringify(s)); return true; } catch (e) { return false; } }
+
+  // ── Google 로그인(토큰) · Drive 업로드 ─────────────────────────────────────────────────
+  var token = null, tokenExp = 0, tc = null, gsiLoading = null;
+  // 세대(epoch): 끄기·지우기를 하면 올라가고, 그 전에 시작한 로그인·조회·업로드는 이 값이 달라져 모두 멈춥니다.
+  var epoch = 0, timer = null;
+  function stopErr() { var e = new Error("stopped"); e.stopped = true; return e; }
+  // 지금 보내도 되는 상태인가: 설정이 준비됐고, 참여자가 켜 두었고, **지금 설정의 동의 문구 버전**에 동의한 경우만.
+  function consented() {
+    var c = config(), s = readState();
+    return c.ready && s.on === true && s.consentVersion === c.consentVersion;
+  }
+  function revokeToken(t) { try { if (t && root.google && root.google.accounts && root.google.accounts.oauth2) root.google.accounts.oauth2.revoke(t, function () {}); } catch (e) {} }
+  function loadGsi() {
+    if (root.google && root.google.accounts && root.google.accounts.oauth2) return Promise.resolve();
+    if (gsiLoading) return gsiLoading;
+    gsiLoading = new Promise(function (res, rej) {
+      var s = root.document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true;
+      s.onload = function () { res(); }; s.onerror = function () { gsiLoading = null; rej(new Error("gsi_load")); };
+      root.document.head.appendChild(s);
+    });
+    return gsiLoading;
+  }
+  // interactive=true 는 사용자가 단추를 누른 직후에만 (팝업이 막히지 않게). false 는 조용히 시도하고, 안 되면 거절됩니다.
+  function getToken(interactive) {
+    var c = config();
+    if (token && Date.now() < tokenExp) return Promise.resolve(token);
+    var my = epoch;
+    return loadGsi().then(function () {
+      if (my !== epoch) throw stopErr();
+      return new Promise(function (res, rej) {
+        tc = root.google.accounts.oauth2.initTokenClient({
+          client_id: c.clientId, scope: SCOPE,
+          callback: function (r) { if (my !== epoch) { if (r && r.access_token) revokeToken(r.access_token); rej(stopErr()); return; } if (r && r.access_token) { token = r.access_token; tokenExp = Date.now() + Math.max(60, (r.expires_in || 3600) - 120) * 1000; res(token); } else rej(new Error((r && r.error) || "no_token")); },
+          error_callback: function (e) { rej(new Error((e && e.type) || "auth_error")); }
+        });
+        tc.requestAccessToken({ prompt: interactive ? "consent" : "" });
+      });
+    });
+  }
+  // 진행 중인 요청: 끄기·지우기·다른 탭의 철회가 오면 모두 abort 해서 남은 전송을 실제로 멈춘다 (이미 서버에 닿은 것은 회수할 수 없음)
+  var inflight = [];
+  // ── 전송 관문 ──────────────────────────────────────────────────────────────────────────────
+  // Drive 로 나가는 모든 요청은 반드시 여기를 지납니다. 엑셀 만들기 같은 동기 작업이 모두 끝난 **fetch 직전 이 줄**에서
+  // ① 작업 세대(gate.epoch)가 그대로인지 ② (건강 정보를 싣는 요청이면) 지금 이 순간 저장소에 적힌 동의가 유효한지를 마지막으로 확인합니다.
+  // 앞에서 확인한 결과를 믿지 않습니다 — 다른 탭이 그 사이 바꿨을 수 있습니다. 새 전송 경로를 만들면 gate 를 반드시 넘기세요.
+  function api(url, opts, tk, gate) {
+    opts = opts || {}; opts.headers = Object.assign({ Authorization: "Bearer " + tk }, opts.headers || {});
+    if (gate && (gate.epoch !== epoch || (gate.consent && !consented()))) return Promise.reject(stopErr());
+    var ac = typeof AbortController !== "undefined" ? new AbortController() : null;
+    if (ac) { opts.signal = ac.signal; inflight.push(ac); }
+    var rm = function () { var i = inflight.indexOf(ac); if (i >= 0) inflight.splice(i, 1); };
+    return (root.fetch)(url, opts).then(function (r) { rm(); if (!r.ok) { var e = new Error("drive_" + r.status); e.status = r.status; throw e; } return r; }, function (e) { rm(); throw e; });
+  }
+  function cancelAll() {
+    epoch++; busy = false;   // 진행 중인 로그인·조회·업로드를 모두 무효로 하고
+    inflight.splice(0).forEach(function (ac) { try { ac.abort(); } catch (e) {} });   // 이미 나간 요청도 중단한다
+    if (timer) { clearTimeout(timer); timer = null; }
+  }
+  function findFile(tk, my) {
+    var q = "appProperties has { key='naResearch' and value='1' } and trashed=false";
+    return api("https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id)&q=" + encodeURIComponent(q), {}, tk, { epoch: my }).then(function (r) { return r.json(); }).then(function (j) { return j.files && j.files[0] ? j.files[0].id : null; });
+  }
+  function multipart(meta, bytes) {
+    var b = "sfr" + Math.random().toString(36).slice(2), enc = new TextEncoder();
+    var head = enc.encode("--" + b + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(meta) + "\r\n--" + b + "\r\nContent-Type: " + XLSX_MIME + "\r\n\r\n");
+    var tail = enc.encode("\r\n--" + b + "--"), out = new Uint8Array(head.length + bytes.length + tail.length);
+    out.set(head, 0); out.set(bytes, head.length); out.set(tail, head.length + bytes.length);
+    return { body: out, type: "multipart/related; boundary=" + b };
+  }
+  function upload(tk, bytes, fileId, my) {
+    var meta = fileId ? { appProperties: { naResearch: "1" } } : { name: "금주노트_연구자료.xlsx", mimeType: XLSX_MIME, appProperties: { naResearch: "1" } };
+    var m = multipart(meta, bytes);
+    var url = fileId ? "https://www.googleapis.com/upload/drive/v3/files/" + fileId + "?uploadType=multipart&fields=id" : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id";
+    return api(url, { method: fileId ? "PATCH" : "POST", headers: { "Content-Type": m.type }, body: m.body }, tk, { epoch: my, consent: true }).then(function (r) { return r.json(); }).then(function (j) { return j.id; });   // 건강 정보를 싣는 요청 — 관문이 동의까지 확인
+  }
+
+  // ── 동기화 · 켜기/끄기 ─────────────────────────────────────────────────────────────────
+  var getSt = function () { return {}; }, onChange = function () {}, busy = false, lastRun = 0;
+
+  function sync(interactive) {
+    if (!consented()) return Promise.resolve({ ok: false, why: "off" });
+    if (busy) return Promise.resolve({ ok: false, why: "busy" });
+    busy = true;
+    var my = epoch, alive = function () { return my === epoch && consented(); };
+    var done = function () { if (my === epoch) busy = false; };
+    return getToken(!!interactive).then(function (tk) {
+      if (!alive()) throw stopErr();
+      var s = readState();
+      return (s.fileId ? Promise.resolve(s.fileId) : findFile(tk, my)).then(function (id) {
+        if (!alive()) throw stopErr();   // 로그인·조회를 기다리는 사이 꺼졌거나 동의 문구가 바뀌었으면 보내지 않는다
+        var bytes = toXlsx(buildSheets(getSt(), s.pid, Date.now()));   // 보내기 직전에 만든다
+        return upload(tk, bytes, id, my).catch(function (e) {
+          if (id && e.status === 404) return upload(tk, bytes, null, my);   // 참여자가 Drive 에서 파일을 지웠으면 새로 만든다
+          throw e;
+        });
+      });
+    }).then(function (id) {
+      if (my !== epoch) return { ok: false, why: "off" };   // 올리는 도중에 지우기·끄기를 했다면 상태를 되살리지 않는다
+      var n = readState(); n.fileId = id; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); return { ok: true };
+    }).catch(function (e) {
+      if (e && e.stopped) { done(); return { ok: false, why: "off" }; }
+      if (my !== epoch) return { ok: false, why: "off" };
+      var n = readState(); n.lastError = String(e && e.message || e).slice(0, 40); n.needAuth = !interactive; writeState(n); busy = false; onChange(); return { ok: false, why: n.lastError };
+    });
+  }
+  // 기록이 바뀔 때마다 부르면 됩니다. 8초 모았다가 보내고, 마지막 전송 뒤 60초 안에는 다시 보내지 않습니다.
+  function touch() {
+    if (!consented()) return;
+    if (timer) clearTimeout(timer);
+    var wait = Math.max(8000, 60000 - (Date.now() - lastRun));
+    timer = setTimeout(function () { timer = null; sync(false); }, wait);
+  }
+  function enable() {
+    var c = config(); if (!c.ready) return Promise.resolve({ ok: false, why: "not_ready" });
+    var s = readState(); s.on = true; s.consentAt = Date.now(); s.consentVersion = c.consentVersion; s.pid = s.pid || newPid(); writeState(s); onChange();
+    return sync(true);   // 켠 직후 한 번 — 사용자가 누른 직후라 로그인 창이 열릴 수 있다
+  }
+  function turnOff(keepToken) {
+    cancelAll();   // 예약 · 진행 중인 로그인·조회·업로드를 모두 무효로 하고 중단
+    var s = readState(); s.on = false; writeState(s);
+    if (!keepToken) { revokeToken(token); token = null; tokenExp = 0; }
+    onChange();
+  }
+  function disable() { turnOff(false); }
+  // 「모든 기록 지우기」용: 끄고, 동의 시각·문구 버전·연구 번호·Drive 파일 id 까지 이 기기에서 모두 지운다 (다시 켜려면 처음부터 동의)
+  function reset() {
+    disable();
+    try { root.localStorage.removeItem(STORE_KEY); } catch (e) {}
+    onChange();
+  }
+  // 「Drive 파일 지우기」: **먼저 참여를 끈다**(예약·진행 중 요청 모두 중단) — 그다음 파일을 지운다.
+  // 지우는 동안 자동 저장이 살아 있어 새 파일을 만들거나, 지우기가 실패했는데 참여가 켜진 채 남는 일이 없다.
+  // 이미 가진 토큰은 지우기에만 쓰고 끝나면 취소한다.
+  function deleteRemote() {
+    var id = readState().fileId; if (!id) return Promise.resolve({ ok: true });
+    var held = token && Date.now() < tokenExp ? token : null;
+    turnOff(true);
+    var my = epoch, done = function () { revokeToken(token); token = null; tokenExp = 0; };
+    return (held ? Promise.resolve(held) : getToken(true)).then(function (tk) { return api("https://www.googleapis.com/drive/v3/files/" + id, { method: "DELETE" }, tk, { epoch: my }); })
+      .catch(function (e) { if (e && e.status === 404) return null; throw e; })   // 이미 없으면 지운 것과 같다
+      .then(function () { done(); var n = readState(); if (n.fileId === id) { n.fileId = null; n.lastSync = null; writeState(n); } onChange(); return { ok: true }; })
+      .catch(function (e) { done(); onChange(); return { ok: false, why: String(e && e.message || e).slice(0, 40) }; });
+  }
+  // 다른 탭에서 끄거나 지웠다면(연구 저장 키가 바뀜) 이 탭의 예약·진행 중인 전송도 멈춘다
+  if (root.addEventListener) root.addEventListener("storage", function (e) {
+    if (e && e.key !== null && e.key !== STORE_KEY) return;
+    if (!consented()) { cancelAll(); revokeToken(token); token = null; tokenExp = 0; onChange(); }
+  });
+  function init(opts) { getSt = opts.getState || getSt; onChange = opts.onChange || onChange; }
+
+  return { config: config, state: readState, consented: consented, init: init, touch: touch, sync: sync, enable: enable, disable: disable, reset: reset, deleteRemote: deleteRemote,
+    buildSheets: buildSheets, buildRecords: buildRecords, buildDaily: buildDaily, buildCodebook: buildCodebook, toXlsx: toXlsx, newPid: newPid,
+    CODEBOOK_VERSION: CODEBOOK_VERSION, _crc32: crc32 };
+});
