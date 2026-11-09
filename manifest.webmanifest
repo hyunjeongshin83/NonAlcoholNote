@@ -1,17 +1,18 @@
 {
+  "id": "/NonAlcoholNote/index.html",
   "name": "알코올 줄이기 · 금주노트",
   "short_name": "알코올 줄이기",
   "description": "술 없이 지낸 일수·아낀 돈을 보여주고 음주 욕구를 기록하는 금주·절주 도우미",
   "lang": "ko",
-  "start_url": "./index.html",
+  "start_url": "./NonAlcohol_app.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#EEF8F3",
   "theme_color": "#0A7168",
   "shortcuts": [
-    { "name": "지금 술이 당겨요", "short_name": "당겨요", "url": "./index.html?sos=1", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "기록하기", "short_name": "기록", "url": "./index.html?tab=log", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+    { "name": "지금 술이 당겨요", "short_name": "당겨요", "url": "./NonAlcohol_app.html?sos=1", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "기록하기", "short_name": "기록", "url": "./NonAlcohol_app.html?tab=log", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
   ],
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
