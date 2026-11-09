@@ -678,7 +678,7 @@ html.big body{zoom:1.18;}
     if($("sos").classList.contains("on")){ closeSos(true); if(!(e.state && e.state.sos)) return; }   // 5분 버티기가 열려 있으면 뒤로 = 닫기
     var v = e.state && e.state.v; if(!v) return;
     if(st.start && v === "setup") v = "home";                              // 시작한 뒤에는 설정 화면으로 돌아가지 않는다
-    else if(!st.start && v !== "start" && v !== "setup") v = "start";      // 시작 전에는 시작 화면까지만
+    else if(!st.start && ["start","setup","help","pro"].indexOf(v) < 0) v = "start";   // 시작 전에는 목표가 필요 없는 화면(시작·설정·도움·상담자 요약)까지만
     show(v, true);
     try{ history.replaceState({v: v}, ""); }catch(er){}
   });
@@ -1186,13 +1186,14 @@ html.big body{zoom:1.18;}
     document.addEventListener("keydown", function(e){ if(done) return; if(e.key === "Enter" || e.key === "Escape" || e.key === " ") hide(); });
     setTimeout(hide, reduce ? 900 : 1600);
   })();
-  if(!st.start){ show("start"); }
+  function initNav(){ try{ history.replaceState({v: navCur}, ""); navOn = true; }catch(e){} }   // 첫 화면의 기록 칸 — 5분 버티기 바로가기(?sos=1)가 칸을 쌓기 전에 먼저 만들어 둔다
+  if(!st.start){ show("start"); initNav(); }
   else {
     var q = new URLSearchParams(location.search), tab = q.get("tab");
     show(["start","home","log","stats","help"].indexOf(tab) >= 0 ? tab : "home");
+    initNav();
     if(q.get("sos") === "1") $("h_sos").onclick();
   }
-  try{ history.replaceState({v: navCur}, ""); navOn = true; }catch(e){}
   if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(function(){});
 })();
 </script>
