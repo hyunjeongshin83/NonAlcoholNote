@@ -30,7 +30,7 @@ test("기록은 시간순 한 줄씩, 모두 숫자 코드로 바뀐다", () => 
   assert.equal(col(r, "alcohol_g_est"), 20.1);                      // 50ml × 17% × 0.789 × 3잔
   assert.equal(col(r, "craving_0_10"), 8); assert.equal(col(r, "craving_level"), 3); assert.equal(col(r, "mood"), 3);
   assert.equal(col(r, "trig_stress"), 1); assert.equal(col(r, "trig_gathering"), 1); assert.equal(col(r, "trig_after_work"), 0); assert.equal(col(r, "trig_none"), 0);
-  assert.equal(col(r, "cope_none"), 1);
+  assert.equal(col(r, "cope_none"), 1); assert.equal(col(r, "cope_hold5"), 0);
   const u = rows[2];
   assert.equal(col(u, "kind"), 1); assert.equal(col(u, "cups"), ""); assert.equal(col(u, "beverage"), ""); assert.equal(col(u, "alcohol_g_est"), "");
   assert.equal(R.buildRecords(state(), PID)[2][H.indexOf("cope_walk")], 1);
@@ -55,6 +55,21 @@ test("일별: 기록 없는 날도 한 줄, 잔 수·알코올 g · 평균 · �
   assert.equal(col(row("2026-11-03"), "day_index"), 0); assert.equal(col(row("2026-11-06"), "day_index"), 3);
   assert.equal(col(row("2026-11-01"), "n_drinks"), 0);
   assert.equal(d.filter((r, i) => i > 0 && r[1] === "2026-11-06").length, 1);       // 마지막 날(오늘)까지
+});
+
+test("5분 버티기로 남긴 기록은 「넘긴 방법 없음」이 아니다 (Codex P2)", () => {
+  const st = state(); st.logs.push({ v: 1, t: at(2026, 11, 6, 8, 0), kind: "urge", cups: 0, lv: "보통", mood: null, trig: [], cope: ["5분 버티기"] });
+  const rows = R.buildRecords(st, PID), H = rows[0], r = rows[rows.length - 1], col = n => r[H.indexOf(n)];
+  assert.equal(col("cope_hold5"), 1); assert.equal(col("cope_none"), 0);
+});
+
+test("일별: 시작일이 800일보다 오래돼도 오늘까지 이어진다 (Codex P2)", () => {
+  const st = state(); st.start = at(2023, 1, 5, 9); st.attempts = []; st.logs = [{ v: 1, t: at(2026, 11, 5, 21, 0), kind: "drink", cups: 1, bev: "소주", lv: "보통", mood: null, trig: [], cope: [] }];
+  const d = R.buildDaily(st, PID, NOW);
+  assert.equal(d[d.length - 1][1], "2026-11-06");
+  assert.equal(d[1][1], "2023-01-05"); assert.ok(d.length > 1300);
+  const big = state(); big.start = at(2000, 1, 1, 9);
+  const d2 = R.buildDaily(big, PID, NOW); assert.equal(d2[d2.length - 1][1], "2026-11-06"); assert.ok(d2.length <= 5001 + 1);
 });
 
 test("참여자 시트: 목표는 코드로, 글은 없다", () => {
@@ -294,4 +309,20 @@ test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, �
   const sw = loadSw({ cached: { "/vendor/qrcodejs-1.0.0.min.js": 1 } });
   const { res } = await sw.run("/vendor/qrcodejs-1.0.0.min.js"); assert.equal(res.from, "cache"); assert.equal(sw.fetched.length, 0, "캐시에 있으면 네트워크를 부르지 않음");
   assert.match(sw.src, /const CACHE="nonalcohol-v19"/);
+});
+
+// ── 올리는 중에 또 바뀐 기록은 빠지지 않는다 (Codex P2) ───────────────────────────────────────
+test("올리는 중에 sync 가 또 불리면 끝난 뒤 한 번 더 예약된다", async () => {
+  const { R: Rr, calls } = fresh({ tokenDelay: 5, uploadDelay: 80 });
+  const real = globalThis.setTimeout, planned = [];
+  globalThis.setTimeout = (fn, ms, ...a) => { if (ms >= 8000) { planned.push(ms); return 0; } return real(fn, ms, ...a); };   // 예약(8초 이상)만 가로채서 기록
+  try {
+    const first = Rr.enable();                                   // 켠 직후 첫 올리기 (80ms 걸림)
+    await new Promise(r => real(r, 30));
+    const busy = await Rr.sync(false);                           // 올리는 중에 기록이 바뀌어 타이머가 불렀다
+    assert.equal(busy.ok, false); assert.equal(busy.why, "busy");
+    assert.equal((await first).ok, true);
+    assert.ok(planned.length >= 1, "끝난 뒤 다시 올리도록 예약되어야 함");
+  } finally { globalThis.setTimeout = real; }
+  assert.ok(calls.filter(c => c.startsWith("POST ")).length >= 1);
 });

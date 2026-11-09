@@ -15,6 +15,7 @@
 
   var CODEBOOK_VERSION = "1";
   var DAY = 86400000;
+  var MAX_DAILY_DAYS = 5000;   // 일별 시트의 최대 날수(약 13년). 넘으면 오래된 날부터 빠지고 codebook 에 적는다 — 기록(records) 시트는 줄이지 않는다
   var STORE_KEY = "nonalcohol.research.v1";
   var SCOPE = "https://www.googleapis.com/auth/drive.file";
   var XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -29,7 +30,7 @@
   ];
   var COPE = [
     ["cope_water", "물·차 마시기"], ["cope_breath", "심호흡"], ["cope_walk", "산책"], ["cope_contact", "연락하기"],
-    ["cope_leave", "자리 피하기"], ["cope_snack", "간식 먹기"]
+    ["cope_leave", "자리 피하기"], ["cope_snack", "간식 먹기"], ["cope_hold5", "5분 버티기"]   // 5분 버티기를 끝내면 앱이 이 이름으로 기록을 남긴다
   ];
   // 술 종류 코드 · 1회 분량(ml) · 도수(%) — 앱의 BEV 와 같은 값. 알코올 g = ml × 도수% × 0.789 × 잔 수 (대략)
   var BEV = [["소주", 50, 17], ["맥주", 355, 4.5], ["와인", 150, 12], ["막걸리", 200, 6], ["양주", 30, 40]];
@@ -88,11 +89,12 @@
     if (isNum(st.start)) times.push(st.start);
     if (!times.length) return rows;
     var first = Math.min.apply(null, times), last = Math.max(Math.max.apply(null, times), now || Date.now());
+    if (calDays(first, last) > MAX_DAILY_DAYS - 1) first = new Date(dkey(last) + "T12:00:00").getTime() - (MAX_DAILY_DAYS - 1) * DAY;   // 오래된 쪽을 자른다 (최근·오늘은 항상 남김)
     var by = {};
     logs.forEach(function (r) { var k = dkey(r.t); (by[k] = by[k] || []).push(r); });
     var startKey = isNum(st.start) ? dkey(st.start) : null;
     var t = new Date(dkey(first) + "T12:00:00").getTime(), guard = 0;
-    while (dkey(t) <= dkey(last) && guard++ < 800) {
+    while (dkey(t) <= dkey(last) && guard++ < MAX_DAILY_DAYS + 2) {
       var k = dkey(t), L = by[k] || [], drinks = L.filter(function (r) { return r.kind === "drink"; }), urges = L.length - drinks.length;
       var cr = L.filter(function (r) { return isNum(r.cr) && r.cr >= 0 && r.cr <= 10; }).map(function (r) { return r.cr; });
       var cups = drinks.reduce(function (a, r) { return a + (isNum(r.cups) ? r.cups : 0); }, 0);
@@ -139,6 +141,7 @@
     s("daily", "n_urges_held · n_drinks", "그날 넘긴 기록 수 · 마신 기록 수", "숫자");
     s("daily", "cups_total · alcohol_g_est", "그날 마신 잔 수 합 · 알코올 대략 g 합(종류를 아는 기록만)", "숫자 · 안 마신 날 잔 수는 빈칸");
     s("daily", "craving_mean_0_10", "그날 마시고 싶은 정도 평균", "숫자 · 기록 없으면 빈칸");
+    s("daily", "(범위)", "일별 시트는 가장 이른 기록·시작일부터 오늘까지. " + MAX_DAILY_DAYS + "일을 넘으면 가장 최근 " + MAX_DAILY_DAYS + "일만 담는다 (records 시트는 줄이지 않음)", "");
     s("daily", "dry_day", "그날 마신 기록이 없음 (기록을 안 한 날도 1 — 안 마셨다는 뜻이 아니라 마신 기록이 없다는 뜻)", "1 · 0");
     s("(제외)", "이름·연락처·나의 이유·사진", "자유로 적은 글과 사진은 파일에 넣지 않습니다", "");
     return R;
@@ -282,7 +285,7 @@
     return (root.fetch)(url, opts).then(function (r) { rm(); if (!r.ok) { var e = new Error("drive_" + r.status); e.status = r.status; throw e; } return r; }, function (e) { rm(); throw e; });
   }
   function cancelAll() {
-    epoch++; busy = false;   // 진행 중인 로그인·조회·업로드를 모두 무효로 하고
+    epoch++; busy = false; dirty = false;   // 진행 중인 로그인·조회·업로드를 모두 무효로 하고
     inflight.splice(0).forEach(function (ac) { try { ac.abort(); } catch (e) {} });   // 이미 나간 요청도 중단한다
     if (timer) { clearTimeout(timer); timer = null; }
   }
@@ -305,11 +308,11 @@
   }
 
   // ── 동기화 · 켜기/끄기 ─────────────────────────────────────────────────────────────────
-  var getSt = function () { return {}; }, onChange = function () {}, busy = false, lastRun = 0;
+  var getSt = function () { return {}; }, onChange = function () {}, busy = false, lastRun = 0, dirty = false;   // dirty: 올리는 중에 기록이 또 바뀜 — 끝난 뒤 한 번 더 올린다
 
   function sync(interactive) {
     if (!consented()) return Promise.resolve({ ok: false, why: "off" });
-    if (busy) return Promise.resolve({ ok: false, why: "busy" });
+    if (busy) { dirty = true; return Promise.resolve({ ok: false, why: "busy" }); }   // 올리는 중이면 이 변경이 빠지지 않게 표시만 해 둔다
     busy = true;
     var my = epoch, alive = function () { return my === epoch && consented(); };
     var done = function () { if (my === epoch) busy = false; };
@@ -326,7 +329,7 @@
       });
     }).then(function (id) {
       if (my !== epoch) return { ok: false, why: "off" };   // 올리는 도중에 지우기·끄기를 했다면 상태를 되살리지 않는다
-      var n = readState(); n.fileId = id; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); return { ok: true };
+      var n = readState(); n.fileId = id; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); if (dirty) { dirty = false; touch(); } return { ok: true };
     }).catch(function (e) {
       if (e && e.stopped) { done(); return { ok: false, why: "off" }; }
       if (my !== epoch) return { ok: false, why: "off" };
@@ -336,6 +339,7 @@
   // 기록이 바뀔 때마다 부르면 됩니다. 8초 모았다가 보내고, 마지막 전송 뒤 60초 안에는 다시 보내지 않습니다.
   function touch() {
     if (!consented()) return;
+    if (busy) dirty = true;
     if (timer) clearTimeout(timer);
     var wait = Math.max(8000, 60000 - (Date.now() - lastRun));
     timer = setTimeout(function () { timer = null; sync(false); }, wait);
