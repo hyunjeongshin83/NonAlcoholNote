@@ -87,6 +87,7 @@
     var rows = [["participant_id", "date", "day_index", "n_urges_held", "n_drinks", "cups_total", "alcohol_g_est", "craving_mean_0_10", "dry_day"]];
     var times = logs.map(function (r) { return r.t; });
     if (isNum(st.start)) times.push(st.start);
+    (st.attempts || []).forEach(function (a) { if (a && isNum(a.start)) times.push(a.start); });   // 기록 없이 끝난 앞 시도의 날들도 일별에 남긴다 (Codex P2)
     if (!times.length) return rows;
     var first = Math.min.apply(null, times), last = Math.max(Math.max.apply(null, times), now || Date.now());
     if (calDays(first, last) > MAX_DAILY_DAYS - 1) first = new Date(dkey(last) + "T12:00:00").getTime() - (MAX_DAILY_DAYS - 1) * DAY;   // 오래된 쪽을 자른다 (최근·오늘은 항상 남김)

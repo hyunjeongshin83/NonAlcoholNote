@@ -410,3 +410,12 @@ test("파일을 찾고 만들고 덮어쓰는 구간은 Web Locks 로 탭 사이
     assert.equal(f.R.state().fileId, "F1", "잠금 안에서 파일 id 가 남는다");
   } finally { if (origNav) Object.defineProperty(globalThis, "navigator", origNav); else delete globalThis.navigator; }
 });
+
+test("일별: 기록 없이 끝난 앞 시도의 날들도 담는다 — 다시 시작해도 사라지지 않는다 (Codex P2)", () => {
+  const st = { goal: "술 끊기", freq: 3, price: 30000, start: at(2026, 11, 8, 9), attempts: [{ start: at(2026, 11, 1, 9), end: at(2026, 11, 7, 9) }], logs: [] };
+  const NOW2 = at(2026, 11, 10, 12);
+  const d = R.buildDaily(st, PID, NOW2);
+  assert.equal(d[1][1], "2026-11-01"); assert.equal(d[d.length - 1][1], "2026-11-10");
+  const st2 = { ...st, start: null };                       // 새 시작일을 정하기 전
+  const d2 = R.buildDaily(st2, PID, NOW2); assert.equal(d2[1][1], "2026-11-01"); assert.ok(d2.length > 1);
+});
