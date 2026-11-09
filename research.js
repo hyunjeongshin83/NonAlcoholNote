@@ -290,8 +290,9 @@
     inflight.splice(0).forEach(function (ac) { try { ac.abort(); } catch (e) {} });   // 이미 나간 요청도 중단한다
     if (timer) { clearTimeout(timer); timer = null; }
   }
-  function findFile(tk, my) {
-    var q = "appProperties has { key='naResearch' and value='1' } and trashed=false";
+  // 같은 구글 계정으로 다른 기기·브라우저에서 켜면 연구 번호(pid)가 새로 만들어진다 — 번호까지 맞는 파일만 찾아, 서로 덮어쓰지 않게 한다 (파일은 번호마다 하나)
+  function findFile(tk, my, pid) {
+    var q = "appProperties has { key='naResearch' and value='1' } and appProperties has { key='naPid' and value='" + String(pid || "").replace(/[^A-Za-z0-9-]/g, "") + "' } and trashed=false";
     return api("https://www.googleapis.com/drive/v3/files?spaces=drive&fields=files(id)&q=" + encodeURIComponent(q), {}, tk, { epoch: my }).then(function (r) { return r.json(); }).then(function (j) { return j.files && j.files[0] ? j.files[0].id : null; });
   }
   function multipart(meta, bytes) {
@@ -301,8 +302,9 @@
     out.set(head, 0); out.set(bytes, head.length); out.set(tail, head.length + bytes.length);
     return { body: out, type: "multipart/related; boundary=" + b };
   }
-  function upload(tk, bytes, fileId, my) {
-    var meta = fileId ? { appProperties: { naResearch: "1" } } : { name: "금주노트_연구자료.xlsx", mimeType: XLSX_MIME, appProperties: { naResearch: "1" } };
+  function upload(tk, bytes, fileId, my, pid) {
+    var props = { naResearch: "1", naPid: pid };
+    var meta = fileId ? { appProperties: props } : { name: "금주노트_연구자료.xlsx", mimeType: XLSX_MIME, appProperties: props };
     var m = multipart(meta, bytes);
     var url = fileId ? "https://www.googleapis.com/upload/drive/v3/files/" + fileId + "?uploadType=multipart&fields=id" : "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id";
     return api(url, { method: fileId ? "PATCH" : "POST", headers: { "Content-Type": m.type }, body: m.body }, tk, { epoch: my, consent: true }).then(function (r) { return r.json(); }).then(function (j) { return j.id; });   // 건강 정보를 싣는 요청 — 관문이 동의까지 확인
@@ -326,12 +328,12 @@
     return getToken(!!interactive).then(function (tk) {
       if (!alive()) throw stopErr();
       var s = readState();
-      return (s.fileId ? Promise.resolve(s.fileId) : findFile(tk, my)).then(function (id) {
+      return (s.fileId ? Promise.resolve(s.fileId) : findFile(tk, my, s.pid)).then(function (id) {
         if (!alive()) throw stopErr();   // 로그인·조회를 기다리는 사이 꺼졌거나 동의 문구가 바뀌었으면 보내지 않는다
         var snap = getSt(); sig = sigOf(snap);
         var bytes = toXlsx(buildSheets(snap, s.pid, Date.now()));   // 보내기 직전에 만든다
-        return upload(tk, bytes, id, my).catch(function (e) {
-          if (id && e.status === 404) return upload(tk, bytes, null, my);   // 참여자가 Drive 에서 파일을 지웠으면 새로 만든다
+        return upload(tk, bytes, id, my, s.pid).catch(function (e) {
+          if (id && e.status === 404) return upload(tk, bytes, null, my, s.pid);   // 참여자가 Drive 에서 파일을 지웠으면 새로 만든다
           throw e;
         });
       });

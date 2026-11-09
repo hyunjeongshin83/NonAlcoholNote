@@ -121,13 +121,13 @@ test("연구용 번호는 P- 와 16진수 8자리", () => { assert.match(R.newPi
 const KEY = "nonalcohol.research.v1";
 function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 0, deleteStatus = 200, seed = null } = {}) {
   delete require.cache[require.resolve("../research.js")];
-  const store = {}, calls = [], revoked = [], rec = { aborted: 0, completed: 0 }, listeners = {};
+  const store = {}, calls = [], raw = [], revoked = [], rec = { aborted: 0, completed: 0 }, listeners = {};
   globalThis.addEventListener = (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); };
   globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
   if (seed) store[KEY] = JSON.stringify(seed);
   const hooks = {};
   globalThis.fetch = async (url, opts = {}) => {
-    calls.push((opts.method || "GET") + " " + String(url).split("?")[0]);
+    calls.push((opts.method || "GET") + " " + String(url).split("?")[0]); raw.push({ url: String(url), body: opts.body });
     if ((opts.method || "") === "DELETE") { if (deleteDelay) await new Promise(r => setTimeout(r, deleteDelay)); return { ok: deleteStatus === 200, status: deleteStatus, json: async () => ({}) }; }
     const isUp = String(url).includes("/upload/");
     const delay = isUp ? uploadDelay : listDelay;
@@ -144,7 +144,7 @@ function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 
     revoke(t) { revoked.push(t); } } } };
   globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1" };
   const R2 = require("../research.js"); R2.init({ getState: () => { if (hooks.onBuild) hooks.onBuild(store); return state(); } });
-  return { R: R2, store, calls, revoked, rec, listeners, hooks };
+  return { R: R2, store, calls, raw, revoked, rec, listeners, hooks };
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const posts = calls => calls.filter(c => c.startsWith("POST") || c.startsWith("PATCH"));
@@ -359,4 +359,14 @@ test("구글이 토큰을 거절(401)하면 버려서, 다음 「지금 저장�
   const r1 = await f.R.enable(); assert.equal(r1.ok, false);
   const r2 = await f.R.sync(true); assert.equal(r2.ok, true);
   assert.equal(inits, 2, "두 번째에는 거절된 토큰을 다시 쓰지 않고 새로 받음");
+});
+
+test("파일 찾기는 연구 번호까지 맞는 것만 — 다른 기기의 파일을 덮어쓰지 않는다 (Codex P2)", async () => {
+  const f = fresh({ tokenDelay: 5 }); const r = await f.R.enable(); assert.equal(r.ok, true);
+  const pid = f.R.state().pid, list = f.raw.find(x => x.url.includes("/drive/v3/files?"));
+  assert.ok(list, "목록 조회가 있었음");
+  const q = decodeURIComponent(list.url.split("q=")[1]);
+  assert.match(q, new RegExp("naPid' and value='" + pid + "'"), "조회 조건에 이 기기의 연구 번호가 들어 있음");
+  const up = f.raw.find(x => x.url.includes("/upload/")); assert.ok(up);
+  assert.ok(Buffer.from(up.body).toString("utf8").includes('"naPid":"' + pid + '"'), "올리는 파일에 번호가 속성으로 붙음");
 });
