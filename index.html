@@ -65,6 +65,11 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .stat{background:#fff;border:1px solid var(--line);border-radius:20px;padding:14px 8px;text-align:center;}
 .stat b{display:block;font-size:1.1875rem;color:var(--ink);font-weight:900;font-variant-numeric:tabular-nums;word-break:keep-all;}
 .stat span{font-size:0.8125rem;color:var(--d3);font-weight:700;}
+/* 메인 화면 전용 — #pro 의 통계 카드(.stat)는 그대로 (금연노트 #58 교훈) */
+#v-home .stat{border-radius:22px;padding:12px 6px 14px;}
+#v-home .stat .ic{width:36px;height:36px;border-radius:12px;background:var(--g0);color:var(--brand);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;}
+#v-home .stat .ic svg{width:20px;height:20px;}
+#v-home .hero{border-radius:28px;}
 .next{display:flex;gap:12px;align-items:center;}
 .next .ic{flex:none;width:44px;height:44px;border-radius:14px;background:var(--g0);color:var(--g6);display:flex;align-items:center;justify-content:center;}
 .next .ic svg{width:26px;height:26px;}
@@ -234,6 +239,9 @@ html.big body{zoom:1.18;}
   <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h6M9 12.5h6M12 7.5V17"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.2 3.8 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.3-5.8 5.5-9.6z"/></symbol>
 </svg>
 <div class="wrap">
   <div class="eyebrow"><span class="dot"></span><span>알코올 줄이기 · 금주노트</span><span class="cute">오늘도 한 걸음</span></div>
@@ -286,9 +294,9 @@ html.big body{zoom:1.18;}
       <div class="att" id="h_att"></div>
     </div>
     <div class="stats">
-      <div class="stat"><b id="h_dry">0</b><span>술 없는 날</span></div>
-      <div class="stat"><b id="h_money">0원</b><span>아낀 돈(추정)</span></div>
-      <div class="stat"><b id="h_week">0g</b><span>최근 7일 마신 순수 알코올(대략)</span></div>
+      <div class="stat"><div class="ic" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-calendar"/></svg></div><b id="h_dry">0</b><span>술 없는 날</span></div>
+      <div class="stat"><div class="ic" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-coin"/></svg></div><b id="h_money">0원</b><span>아낀 돈(추정)</span></div>
+      <div class="stat"><div class="ic" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-drop"/></svg></div><b id="h_week">0g</b><span>최근 7일 마신 순수 알코올(대략)</span></div>
     </div>
     <button class="btn sos" id="h_sos"><svg aria-hidden="true" focusable="false"><use href="#i-timer"/></svg>지금 술이 당겨요</button>
     <div class="card" id="mn_todo">
