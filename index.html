@@ -17,7 +17,9 @@
    흰 글자 / --g4→--g7 (#0E6B48→#084A31) 버튼·히어로 6.53~10.32:1 · --g5 #0B5A3C 8.26:1
    --d3 #5A716D / --g0 4.82:1 */
 :root{--g0:#EEF8F3;--g1:#D7F0E3;--g2:#A8DDC3;--g4:#0E6B48;--g5:#0B5A3C;--g6:#0E6B48;--g7:#084A31;
-  --ink:#122423;--d2:#324744;--d3:#5A716D;--d4:#8FA6A2;--line:#E6F1EE;--coral:#F6796B;}
+  --ink:#122423;--d2:#324744;--d3:#5A716D;--d4:#8FA6A2;--line:#E6F1EE;--coral:#F6796B;
+  /* APP-STYLE 이름 (--danger-bg) — 값은 이전과 같음. 브랜드 색 --brand 는 아래 mn-theme(메디노트 틸)에 있음 */
+  --danger-bg:#FDEDE9;}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:var(--d2);letter-spacing:-.01em;
   background:var(--g7);display:flex;justify-content:center;min-height:100vh;}
@@ -51,7 +53,7 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .btn{width:100%;padding:14px;border:none;border-radius:999px;font-family:inherit;font-weight:800;font-size:1rem;color:#fff;background:linear-gradient(135deg,var(--g4),var(--g7));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 16px rgba(14,107,72,.3);}
 .btn.ghost{background:#fff;color:var(--g6);border:1.5px solid var(--line);box-shadow:none;}
 .btn svg{width:20px;height:20px;flex:none;}
-.btn.sos{background:linear-gradient(135deg,#F89B8F,var(--coral));box-shadow:0 6px 16px rgba(246,121,107,.3);}
+.btn.sos{background:linear-gradient(135deg,#F89B8F,var(--coral));color:var(--ink);box-shadow:0 6px 16px rgba(246,121,107,.3);}
 
 /* 홈 — 금연 일수 */
 .hero{text-align:center;padding:26px 18px 22px;background:linear-gradient(160deg,var(--g4),var(--g7));color:#fff;border:none;}
@@ -76,18 +78,18 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .tl li:before{content:"";position:absolute;left:-23px;top:4px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--d4);}
 .tl li.done:before{background:var(--g4);border-color:var(--g4);}
 .tl .t{font-size:0.8125rem;font-weight:800;color:var(--g6);}
-.tl li:not(.done) .t{color:var(--d4);}
+.tl li:not(.done) .t{color:var(--d3);}
 .tl .d{font-size:0.9688rem;color:var(--ink);line-height:1.45;margin-top:2px;}
 
 /* 흡연 욕구 기록 */
 .chips{display:flex;flex-wrap:wrap;gap:7px;}
-.chip{font-family:inherit;font-size:0.9062rem;font-weight:700;padding:9px 13px;border-radius:20px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--d3);}
+.chip{font-family:inherit;font-size:0.9062rem;font-weight:700;padding:9px 13px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:20px;cursor:pointer;border:1.5px solid var(--line);background:#fff;color:var(--d3);}
 .chip.on{background:var(--g6);color:#fff;border-color:var(--g6);}
 .log{list-style:none;}
 .log li{display:flex;gap:10px;align-items:flex-start;padding:12px 2px;border-bottom:1px solid var(--line);}
 .log li:last-child{border-bottom:none;}
 .log .lv{min-width:38px;text-align:center;font-weight:900;font-size:0.8125rem;border-radius:10px;padding:4px 0;background:var(--g0);color:var(--g6);}
-.log .lv.hi{background:#FDEDE9;color:var(--coral);}
+.log .lv.hi{background:var(--danger-bg);color:var(--ink);}
 .log .body{flex:1;font-size:0.9375rem;color:var(--ink);line-height:1.4;}
 .log .meta{font-size:0.7812rem;color:var(--d3);margin-top:2px;}
 .ph-row{display:flex;gap:10px;align-items:center;margin:10px 0;}
@@ -107,7 +109,7 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .tipcard.on{display:block;}
 .tipcard.hi{background:#FFF3F0;border-color:#F9C4BC;}
 .tipcard .t{font-size:0.8125rem;font-weight:800;color:var(--g6);margin-bottom:4px;}
-.tipcard.hi .t{color:var(--coral);}
+.tipcard.hi .t{color:var(--ink);}
 .tipcard .d{font-size:1rem;color:var(--ink);line-height:1.5;}
 .hero .att{font-size:0.875rem;opacity:.92;margin-top:8px;font-weight:700;}
 /* 통계 */
@@ -136,7 +138,7 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .dev li:last-child{border-bottom:none;}
 .dev .st{flex:none;width:52px;text-align:center;font-size:0.75rem;font-weight:900;border-radius:9px;padding:4px 0;height:fit-content;}
 .dev .ok{background:var(--g1);color:var(--g6);}
-.dev .no{background:#FDEDE9;color:var(--coral);}
+.dev .no{background:var(--danger-bg);color:var(--ink);}
 .dev .md{background:#FFF7EC;color:#96601A;}
 .dev small{display:block;font-size:0.8125rem;color:var(--d3);}
 html.big body{zoom:1.18;}
@@ -148,7 +150,7 @@ html.big body{zoom:1.18;}
 .help .ic svg{width:24px;height:24px;}
 .help b{display:block;font-size:1rem;}
 .help span{font-size:0.8438rem;color:var(--d3);}
-.help .go{margin-left:auto;color:var(--d4);font-weight:900;}
+.help .go{margin-left:auto;color:var(--d3);font-weight:900;}
 .disc{font-size:0.875rem;color:var(--d3);text-align:center;line-height:1.5;margin-top:8px;}
 
 /* 하단 탭 */
@@ -198,7 +200,7 @@ html.big body{zoom:1.18;}
 /* 시안 C (2026-10-15 대표님 선택) — 메디노트 틸로 맞춘 색 + 태블릿 두 칸. 값은 MediNote_app.html 의 --brand 줄과 같습니다.
    WCAG 상대휘도: #0A7168 / 흰 바탕 5.87:1 · / #D8F5EF 5.10:1 · 흰 글자 / #0A7168 5.87:1 · 흰 글자 / #06413E 11.45:1
    (--g0 #EEF8F3·--g1 #D7F0E3 은 --d3 글자가 올라가 있어 그대로 둡니다 — #E1F1EE 로 바꾸면 --d3 대비가 4.48:1 로 떨어집니다) */
-:root{--g4:#0A7168;--g5:#06413E;--g6:#0A7168;--g7:#06413E;--focus-color:#0A7168;}
+:root{--brand:#0A7168;--g4:var(--brand);--g5:#06413E;--g6:var(--brand);--g7:#06413E;--focus-color:var(--brand);}
 .eyebrow .dot{box-shadow:0 0 0 4px rgba(10,113,104,.14);}
 .modal{background:rgba(6,65,62,.55);}
 .pro-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
