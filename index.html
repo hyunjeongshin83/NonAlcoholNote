@@ -30,6 +30,11 @@ body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:var(--d2);l
 .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--g4);box-shadow:0 0 0 4px rgba(14,107,72,.14);}
 .eyebrow span{font-size:0.875rem;font-weight:800;color:var(--g6);letter-spacing:.4px;}
 .eyebrow .cute{font-family:'Gaegu',cursive;font-weight:700;font-size:1rem;color:var(--g5);margin-left:auto;}
+.entry{background:linear-gradient(135deg,var(--g4),var(--g7));color:#fff;border-radius:28px;text-align:center;padding:28px 20px 24px;margin-bottom:13px;box-shadow:0 12px 36px rgba(8,74,49,.18);}
+.entry .logo{width:64px;height:64px;border-radius:20px;background:#fff;color:var(--brand);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.entry .logo svg{width:36px;height:36px;}
+.entry .title{color:#fff;font-size:2rem;}
+.entry .sub{color:#fff;margin-top:8px;}
 .card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px 18px 18px;box-shadow:0 12px 36px rgba(8,74,49,.08);margin-bottom:13px;}
 .title{font-family:'Gaegu','Pretendard',cursive;font-size:1.6875rem;font-weight:700;color:var(--ink);}
 .sub{font-size:0.9375rem;color:var(--d3);margin-top:4px;line-height:1.5;}
@@ -243,6 +248,7 @@ html.big body{zoom:1.18;}
   <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></symbol>
   <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/></symbol>
+  <symbol id="i-nodrink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10l-1 7a4 4 0 0 1-8 0z"/><path d="M12 15v5M9 20h6"/><path d="M4 4l16 16"/></symbol>
   <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></symbol>
   <symbol id="i-coin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h6M9 12.5h6M12 7.5V17"/></symbol>
   <symbol id="i-drop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5c3.2 3.8 5.5 6.6 5.5 9.6a5.5 5.5 0 0 1-11 0c0-3 2.3-5.8 5.5-9.6z"/></symbol>
@@ -252,9 +258,12 @@ html.big body{zoom:1.18;}
 
   <!-- 시작 페이지 (대표님 요청 2026-10-15 · 처음 열면 여기, 이후에는 맨 앞 탭에서 다시) -->
   <section class="view" id="v-start">
-    <div class="card">
+    <div class="entry">
+      <div class="logo" aria-hidden="true"><svg aria-hidden="true" focusable="false"><use href="#i-nodrink"/></svg></div>
       <div class="title">알코올 줄이기</div>
       <p class="sub">마시고 싶은 순간을 적고, 넘긴 방법을 모아, 약사·상담자와 함께 볼 수 있는 금주·절주 기록장이에요.</p>
+    </div>
+    <div class="card">
       <div class="tipcard on" style="margin-top:14px"><div class="t">먼저 알아 두세요</div><div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div></div>
       <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭의 「약사·상담자와 함께 보기」로 요약을 함께 봐요.</span></div></li></ol>
       <button class="btn" id="st_go" style="margin-top:6px">시작하기</button>
