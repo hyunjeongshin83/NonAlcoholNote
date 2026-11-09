@@ -26,6 +26,22 @@ body{font-family:'Pretendard','Inter',-apple-system,sans-serif;color:var(--d2);l
 .wrap{width:100%;max-width:430px;min-height:100vh;
   background:linear-gradient(180deg,#EEF8F3 0%,#FAFDFB 30%,#EEF8F3 100%);
   box-shadow:0 0 60px rgba(0,0,0,.28);padding:22px 16px 110px;}
+/* 진입(스플래시) 화면 — 샘플(Mobile app UI Template)의 첫 화면을 앱 색으로: 화면 전체 그라데이션 가운데 로고·이름 + 한 줄.
+   글자는 앱에 이미 있는 것만 씁니다(이름 「금주노트」 · 머리글의 「오늘도 한 걸음」). 열릴 때 한 번(탭 하나당), 알림·바로가기(?tab · ?sos)로 들어오면 건너뜁니다.
+   JS 가 죽어도 3초 뒤 스스로 사라집니다(sfSplashOut). 흰 글자 / --g4→--g7 대비는 화면 픽셀로 잰 값(가장 밝은 원 위 5.17:1 ~ 아래 끝 11.45:1, 모두 4.5:1 이상). */
+#splash{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;color:#fff;cursor:pointer;overflow:hidden;
+  background:linear-gradient(180deg,var(--g4) 0%,var(--g7) 100%);opacity:1;transition:opacity .4s ease;}
+.splash-on #splash{display:flex;animation:sfSplashOut .4s ease 3s forwards;}
+#splash.out{opacity:0;pointer-events:none;}
+#splash:before,#splash:after{content:"";position:absolute;border-radius:50%;background:var(--g2);pointer-events:none;}
+#splash:before{width:340px;height:340px;top:-130px;right:-110px;opacity:.12;}
+#splash:after{width:240px;height:240px;bottom:-90px;left:-80px;opacity:.09;}
+#splash .mark,#splash .tag{position:relative;}
+#splash .mark{display:flex;align-items:center;gap:12px;font-family:'Gaegu','Pretendard',cursive;font-weight:700;font-size:3.25rem;line-height:1;}
+#splash .mark svg{width:46px;height:46px;flex:none;}
+#splash .tag{font-size:1.125rem;font-weight:700;letter-spacing:.2px;}
+@keyframes sfSplashOut{to{opacity:0;visibility:hidden;}}
+@media (prefers-reduced-motion:reduce){#splash{transition:none;}.splash-on #splash{animation-duration:.01s;}}
 .eyebrow{display:flex;align-items:center;gap:8px;margin:0 4px 12px;}
 .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--g4);box-shadow:0 0 0 4px rgba(14,107,72,.14);}
 .eyebrow span{font-size:0.875rem;font-weight:800;color:var(--g6);letter-spacing:.4px;}
@@ -242,6 +258,8 @@ html.big body{zoom:1.18;}
 </style>
 </head>
 <body>
+<script>try{ if(!sessionStorage.getItem("sfSplash") && !/[?&](tab|sos)=/.test(location.search)) document.documentElement.classList.add("splash-on"); }catch(e){}</script>
+<div id="splash" aria-hidden="true"><div class="mark"><svg aria-hidden="true" focusable="false"><use href="#i-nodrink"/></svg><span>금주노트</span></div><div class="tag">오늘도 한 걸음</div></div>
 <!-- 선 아이콘 한 벌 (금연노트와 공통) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></symbol>
@@ -640,10 +658,10 @@ html.big body{zoom:1.18;}
     var h = new Date().getHours();
     $("h_greet").textContent = h < 5 ? "늦은 밤이에요" : h < 12 ? "좋은 아침이에요" : h < 18 ? "좋은 오후예요" : "편안한 저녁이에요";
   }
-  function show(v){
+  var navOn = false, navCur = null, skipPop = 0, sosNoPush = false;   // 기기·브라우저 「뒤로」 — 화면마다 기록을 한 칸씩 쌓아 두고, 뒤로 가면 앞 화면으로 (앱 밖으로 바로 나가지 않게)
+  function show(v, fromPop){
     document.querySelectorAll(".view").forEach(function(s){ s.classList.toggle("on", s.id === "v-"+v); });
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
-    $("tabs").style.display = v === "setup" ? "none" : "";
     if(v === "setup") fillSetup();
     if(v === "start") $("st_go").textContent = st.start ? "메인으로" : "시작하기";
     if(v === "log"){ renderLogs(); renderMedia(); }
@@ -652,7 +670,19 @@ html.big body{zoom:1.18;}
     if(v === "pro") renderPro();
     if(v === "home"){ greetNow(); tick(); renderMain(); }
     window.scrollTo(0,0);
+    if(navOn && !fromPop && v !== navCur){ try{ history.pushState({v: v}, ""); }catch(e){} }
+    navCur = v;
   }
+  window.addEventListener("popstate", function(e){
+    if(skipPop){ skipPop--; return; }
+    if($("sos").classList.contains("on")){ closeSos(true); if(!(e.state && e.state.sos)) return; }   // 5분 버티기가 열려 있으면 뒤로 = 닫기
+    var v = e.state && e.state.v; if(!v) return;
+    if(e.state.sos){ show(v, true); sosNoPush = true; try{ $("h_sos").onclick(); }finally{ sosNoPush = false; } return; }   // 앞으로 가기로 5분 버티기 칸에 닿으면 창을 다시 열고 그 칸은 그대로 둔다
+    if(st.start && v === "setup") v = "home";                              // 시작한 뒤에는 설정 화면으로 돌아가지 않는다
+    else if(!st.start && ["start","setup","help","pro"].indexOf(v) < 0) v = "start";   // 시작 전에는 목표가 필요 없는 화면(시작·설정·도움·상담자 요약)까지만
+    show(v, true);
+    try{ history.replaceState({v: v}, ""); }catch(er){}
+  });
   document.getElementById("tabs").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; if(b.dataset.v === "start" || b.dataset.v === "help" || st.start) show(b.dataset.v); else show("setup"); };
   $("s_back").onclick = function(){ show(st.start ? "help" : "start"); };
   $("st_go").onclick = function(){ show(st.start ? "home" : "setup"); };
@@ -1072,6 +1102,7 @@ html.big body{zoom:1.18;}
   $("h_sos").onclick = function(ev){
     var deadline = Date.now() + 300000, ti = 0, lastTip = -1;
     if(!$("sos").classList.contains("on")) sosOpener = (ev && ev.currentTarget) || document.activeElement;
+    if(!sosNoPush && !$("sos").classList.contains("on")){ try{ history.pushState({v: navCur, sos: 1}, ""); }catch(er){} }
     $("sos").classList.add("on"); $("sos_card").focus();
     function step(){   // 남은 시간은 끝나는 시각에서 계산 — 화면이 꺼졌다 켜져도 실제 시간과 맞는다
       var left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
@@ -1082,8 +1113,9 @@ html.big body{zoom:1.18;}
     }
     sosStep = step; clearInterval(sosTimer); step(); sosTimer = setInterval(step, 1000);
   };
-  function closeSos(){
+  function closeSos(fromPop){
     clearInterval(sosTimer); $("sos").classList.remove("on");
+    if(fromPop !== true && history.state && history.state.sos){ skipPop++; try{ history.back(); }catch(er){ skipPop--; } }   // 단추로 닫으면 쌓아 둔 한 칸도 같이 되돌린다
     var o = (sosOpener && sosOpener.offsetParent) ? sosOpener : (document.querySelector("#tabs button.on") || $("h_sos"));
     sosOpener = null; if(o && o.focus) o.focus();
   }
@@ -1140,10 +1172,27 @@ html.big body{zoom:1.18;}
   // ── 시작
   baseline();
   document.addEventListener("visibilitychange", function(){ if(!document.hidden && pullOthers()) afterPull(); });   // 탭으로 돌아오면 한 번 확인
-  if(!st.start){ show("start"); }
+  // 진입(스플래시) 화면 — 한 번 보이고(1.6초, 움직임 줄이기면 0.9초) 넘어갑니다. 아무 곳이나 누르거나 Enter·Esc·Space 로도 건너뜁니다.
+  (function(){
+    var root = document.documentElement, el = $("splash"); if(!el) return;
+    if(!root.classList.contains("splash-on")) return;
+    var done = false, reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function hide(){
+      if(done) return; done = true;
+      try{ sessionStorage.setItem("sfSplash", "1"); }catch(e){}
+      el.classList.add("out");
+      setTimeout(function(){ root.classList.remove("splash-on"); }, reduce ? 0 : 450);
+    }
+    el.addEventListener("click", hide);
+    document.addEventListener("keydown", function(e){ if(done) return; if(e.key === "Enter" || e.key === "Escape" || e.key === " ") hide(); });
+    setTimeout(hide, reduce ? 900 : 1600);
+  })();
+  function initNav(){ try{ history.replaceState({v: navCur}, ""); navOn = true; }catch(e){} }   // 첫 화면의 기록 칸 — 5분 버티기 바로가기(?sos=1)가 칸을 쌓기 전에 먼저 만들어 둔다
+  if(!st.start){ show("start"); initNav(); }
   else {
     var q = new URLSearchParams(location.search), tab = q.get("tab");
     show(["start","home","log","stats","help"].indexOf(tab) >= 0 ? tab : "home");
+    initNav();
     if(q.get("sos") === "1") $("h_sos").onclick();
   }
   if("serviceWorker" in navigator && location.protocol !== "file:") navigator.serviceWorker.register("sw.js").catch(function(){});
