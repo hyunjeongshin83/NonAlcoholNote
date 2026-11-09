@@ -282,7 +282,8 @@
     var ac = typeof AbortController !== "undefined" ? new AbortController() : null;
     if (ac) { opts.signal = ac.signal; inflight.push(ac); }
     var rm = function () { var i = inflight.indexOf(ac); if (i >= 0) inflight.splice(i, 1); };
-    return (root.fetch)(url, opts).then(function (r) { rm(); if (!r.ok) { var e = new Error("drive_" + r.status); e.status = r.status; throw e; } return r; }, function (e) { rm(); throw e; });
+    return (root.fetch)(url, opts).then(function (r) { rm(); if (!r.ok) { if (r.status === 401) { token = null; tokenExp = 0; }   // 구글이 거절한 토큰은 버린다 — 다음 「지금 저장」이 새로 로그인하게
+      var e = new Error("drive_" + r.status); e.status = r.status; throw e; } return r; }, function (e) { rm(); throw e; });
   }
   function cancelAll() {
     epoch++; busy = false; dirty = false;   // 진행 중인 로그인·조회·업로드를 모두 무효로 하고
@@ -310,18 +311,25 @@
   // ── 동기화 · 켜기/끄기 ─────────────────────────────────────────────────────────────────
   var getSt = function () { return {}; }, onChange = function () {}, busy = false, lastRun = 0, dirty = false;   // dirty: 올리는 중에 기록이 또 바뀜 — 끝난 뒤 한 번 더 올린다
 
+  // 내보낸 내용이 바뀌었는지 가려내는 표지 (기록 수 · 가장 늦은 기록 · 시작일 · 시도 수 · 목표 · 횟수 · 가격) — 앱을 닫아 예약이 사라졌어도 다음에 열 때 따라잡게 한다
+  function sigOf(st) {
+    var logs = (st && st.logs) || [], mx = 0, i;
+    for (i = 0; i < logs.length; i++) if (logs[i] && isNum(logs[i].t) && logs[i].t > mx) mx = logs[i].t;
+    return [logs.length, mx, st && st.start, ((st && st.attempts) || []).length, st && st.goal, st && st.freq, st && st.price].join("|");
+  }
   function sync(interactive) {
     if (!consented()) return Promise.resolve({ ok: false, why: "off" });
     if (busy) { dirty = true; return Promise.resolve({ ok: false, why: "busy" }); }   // 올리는 중이면 이 변경이 빠지지 않게 표시만 해 둔다
     busy = true;
-    var my = epoch, alive = function () { return my === epoch && consented(); };
+    var my = epoch, sig = "", alive = function () { return my === epoch && consented(); };
     var done = function () { if (my === epoch) busy = false; };
     return getToken(!!interactive).then(function (tk) {
       if (!alive()) throw stopErr();
       var s = readState();
       return (s.fileId ? Promise.resolve(s.fileId) : findFile(tk, my)).then(function (id) {
         if (!alive()) throw stopErr();   // 로그인·조회를 기다리는 사이 꺼졌거나 동의 문구가 바뀌었으면 보내지 않는다
-        var bytes = toXlsx(buildSheets(getSt(), s.pid, Date.now()));   // 보내기 직전에 만든다
+        var snap = getSt(); sig = sigOf(snap);
+        var bytes = toXlsx(buildSheets(snap, s.pid, Date.now()));   // 보내기 직전에 만든다
         return upload(tk, bytes, id, my).catch(function (e) {
           if (id && e.status === 404) return upload(tk, bytes, null, my);   // 참여자가 Drive 에서 파일을 지웠으면 새로 만든다
           throw e;
@@ -329,7 +337,7 @@
       });
     }).then(function (id) {
       if (my !== epoch) return { ok: false, why: "off" };   // 올리는 도중에 지우기·끄기를 했다면 상태를 되살리지 않는다
-      var n = readState(); n.fileId = id; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); if (dirty) { dirty = false; touch(); } return { ok: true };
+      var n = readState(); n.fileId = id; n.sig = sig; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); if (dirty) { dirty = false; touch(); } return { ok: true };
     }).catch(function (e) {
       if (e && e.stopped) { done(); return { ok: false, why: "off" }; }
       if (my !== epoch) return { ok: false, why: "off" };
@@ -380,7 +388,11 @@
     if (e && e.key !== null && e.key !== STORE_KEY) return;
     if (!consented()) { cancelAll(); revokeToken(token); token = null; tokenExp = 0; onChange(); }
   });
-  function init(opts) { getSt = opts.getState || getSt; onChange = opts.onChange || onChange; }
+  // 시작할 때: 동의한 상태에서 마지막으로 올린 뒤 기록이 바뀌었다면(앱을 닫아 예약이 사라졌거나 연결이 없던 때의 기록) 한 번 따라잡는다
+  function init(opts) {
+    getSt = opts.getState || getSt; onChange = opts.onChange || onChange;
+    try { if (consented() && readState().sig !== sigOf(getSt())) touch(); } catch (e) {}
+  }
 
   return { config: config, state: readState, consented: consented, init: init, touch: touch, sync: sync, enable: enable, disable: disable, reset: reset, deleteRemote: deleteRemote,
     buildSheets: buildSheets, buildRecords: buildRecords, buildDaily: buildDaily, buildCodebook: buildCodebook, toXlsx: toXlsx, newPid: newPid,

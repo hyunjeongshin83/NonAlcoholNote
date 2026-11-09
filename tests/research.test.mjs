@@ -119,11 +119,12 @@ test("연구용 번호는 P- 와 16진수 8자리", () => { assert.match(R.newPi
 
 // ── 동의 철회 · 지우기 · 문구 버전 (Codex 지적 3건) ───────────────────────────────────────────
 const KEY = "nonalcohol.research.v1";
-function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 0, deleteStatus = 200 } = {}) {
+function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 0, deleteStatus = 200, seed = null } = {}) {
   delete require.cache[require.resolve("../research.js")];
   const store = {}, calls = [], revoked = [], rec = { aborted: 0, completed: 0 }, listeners = {};
   globalThis.addEventListener = (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); };
   globalThis.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+  if (seed) store[KEY] = JSON.stringify(seed);
   const hooks = {};
   globalThis.fetch = async (url, opts = {}) => {
     calls.push((opts.method || "GET") + " " + String(url).split("?")[0]);
@@ -325,4 +326,37 @@ test("올리는 중에 sync 가 또 불리면 끝난 뒤 한 번 더 예약된�
     assert.ok(planned.length >= 1, "끝난 뒤 다시 올리도록 예약되어야 함");
   } finally { globalThis.setTimeout = real; }
   assert.ok(calls.filter(c => c.startsWith("POST ")).length >= 1);
+});
+
+// ── 닫았다 다시 열면 따라잡기 · 거절된 토큰은 버리기 (Codex P2) ──────────────────────────────────
+test("다시 열었을 때 마지막으로 올린 뒤 기록이 바뀌어 있으면 한 번 따라잡도록 예약한다", () => {
+  const real = globalThis.setTimeout, planned = [];
+  globalThis.setTimeout = (fn, ms, ...a) => { if (ms >= 8000) { planned.push(ms); return 0; } return real(fn, ms, ...a); };
+  try {
+    fresh({ seed: { on: true, consentVersion: "v1", pid: "P-old00001", sig: "stale" } });
+    assert.equal(planned.length, 1, "내용이 달라졌으면 예약");
+    planned.length = 0;
+    fresh({ seed: { on: false, consentVersion: "v1", pid: "P-old00001" } });
+    assert.equal(planned.length, 0, "동의하지 않았으면 예약하지 않음");
+  } finally { globalThis.setTimeout = real; }
+});
+
+test("올린 직후 상태와 같으면 다시 열어도 예약하지 않는다", async () => {
+  const f = fresh({ tokenDelay: 5 }); const ok = await f.R.enable(); assert.equal(ok.ok, true);
+  const sig = f.R.state().sig; assert.ok(sig && sig.length > 0, "올린 내용의 표지를 남김");
+  const real = globalThis.setTimeout, planned = [];
+  globalThis.setTimeout = (fn, ms, ...a) => { if (ms >= 8000) { planned.push(ms); return 0; } return real(fn, ms, ...a); };
+  try { fresh({ seed: { on: true, consentVersion: "v1", pid: "P-old00001", sig } }); } finally { globalThis.setTimeout = real; }
+  assert.equal(planned.length, 0);
+});
+
+test("구글이 토큰을 거절(401)하면 버려서, 다음 「지금 저장」이 새로 로그인한다", async () => {
+  const f = fresh({ tokenDelay: 5 });
+  let inits = 0; const oi = globalThis.google.accounts.oauth2.initTokenClient;
+  globalThis.google.accounts.oauth2.initTokenClient = o => { inits++; return oi(o); };
+  const of = globalThis.fetch; let n = 0;
+  globalThis.fetch = (u, o) => (String(u).includes("/upload/") && n++ === 0) ? Promise.resolve({ ok: false, status: 401, json: async () => ({}) }) : of(u, o);
+  const r1 = await f.R.enable(); assert.equal(r1.ok, false);
+  const r2 = await f.R.sync(true); assert.equal(r2.ok, true);
+  assert.equal(inits, 2, "두 번째에는 거절된 토큰을 다시 쓰지 않고 새로 받음");
 });
