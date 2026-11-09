@@ -339,7 +339,9 @@
       });
     }).then(function (id) {
       if (my !== epoch) return { ok: false, why: "off" };   // 올리는 도중에 지우기·끄기를 했다면 상태를 되살리지 않는다
-      var n = readState(); n.fileId = id; n.sig = sig; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange(); if (dirty) { dirty = false; touch(); } return { ok: true };
+      var n = readState(); n.fileId = id; n.sig = sig; n.lastSync = Date.now(); n.lastError = null; n.needAuth = false; writeState(n); busy = false; lastRun = Date.now(); onChange();
+      if (sig !== sigOf(getSt())) dirty = true;   // 올리는 동안 이 탭의 기록이 달라졌다(다른 탭의 변경을 합쳤거나 방금 적음) — 올린 것은 낡은 것이니 한 번 더
+      if (dirty) { dirty = false; touch(); } return { ok: true };
     }).catch(function (e) {
       if (e && e.stopped) { done(); return { ok: false, why: "off" }; }
       if (my !== epoch) return { ok: false, why: "off" };

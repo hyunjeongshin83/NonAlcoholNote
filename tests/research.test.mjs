@@ -143,7 +143,7 @@ function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 
     initTokenClient: o => ({ requestAccessToken() { setTimeout(() => o.callback({ access_token: "T", expires_in: 3600 }), tokenDelay); } }),
     revoke(t) { revoked.push(t); } } } };
   globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1" };
-  const R2 = require("../research.js"); R2.init({ getState: () => { if (hooks.onBuild) hooks.onBuild(store); return state(); } });
+  const R2 = require("../research.js"); R2.init({ getState: () => { if (hooks.onBuild) hooks.onBuild(store); return hooks.stateFn ? hooks.stateFn() : state(); } });
   return { R: R2, store, calls, raw, revoked, rec, listeners, hooks };
 }
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -369,4 +369,17 @@ test("파일 찾기는 연구 번호까지 맞는 것만 — 다른 기기의 �
   assert.match(q, new RegExp("naPid' and value='" + pid + "'"), "조회 조건에 이 기기의 연구 번호가 들어 있음");
   const up = f.raw.find(x => x.url.includes("/upload/")); assert.ok(up);
   assert.ok(Buffer.from(up.body).toString("utf8").includes('"naPid":"' + pid + '"'), "올리는 파일에 번호가 속성으로 붙음");
+});
+
+test("올리는 동안 이 탭의 기록이 달라졌으면(다른 탭 변경 합침) 올린 뒤 한 번 더 예약한다 (Codex P2)", async () => {
+  const f = fresh({ tokenDelay: 5, uploadDelay: 60 });
+  const real = globalThis.setTimeout, planned = [];
+  globalThis.setTimeout = (fn, ms, ...a) => { if (ms >= 8000) { planned.push(ms); return 0; } return real(fn, ms, ...a); };
+  try {
+    const first = f.R.enable();
+    await new Promise(r => real(r, 30));                    // 엑셀을 만든 뒤 올리는 중
+    f.hooks.stateFn = () => { const s = state(); s.logs.push({ v: 1, t: at(2026, 11, 6, 7, 0), kind: "drink", cups: 1, bev: "맥주", lv: "보통", trig: [], cope: [] }); return s; };   // 다른 탭의 기록을 합쳤다
+    assert.equal((await first).ok, true);
+    assert.ok(planned.length >= 1, "올린 것이 낡았으니 다시 예약");
+  } finally { globalThis.setTimeout = real; }
 });
