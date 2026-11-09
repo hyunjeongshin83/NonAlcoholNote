@@ -658,7 +658,7 @@ html.big body{zoom:1.18;}
     var h = new Date().getHours();
     $("h_greet").textContent = h < 5 ? "늦은 밤이에요" : h < 12 ? "좋은 아침이에요" : h < 18 ? "좋은 오후예요" : "편안한 저녁이에요";
   }
-  var navOn = false, navCur = null, skipPop = 0;   // 기기·브라우저 「뒤로」 — 화면마다 기록을 한 칸씩 쌓아 두고, 뒤로 가면 앞 화면으로 (앱 밖으로 바로 나가지 않게)
+  var navOn = false, navCur = null, skipPop = 0, sosNoPush = false;   // 기기·브라우저 「뒤로」 — 화면마다 기록을 한 칸씩 쌓아 두고, 뒤로 가면 앞 화면으로 (앱 밖으로 바로 나가지 않게)
   function show(v, fromPop){
     document.querySelectorAll(".view").forEach(function(s){ s.classList.toggle("on", s.id === "v-"+v); });
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
@@ -677,6 +677,7 @@ html.big body{zoom:1.18;}
     if(skipPop){ skipPop--; return; }
     if($("sos").classList.contains("on")){ closeSos(true); if(!(e.state && e.state.sos)) return; }   // 5분 버티기가 열려 있으면 뒤로 = 닫기
     var v = e.state && e.state.v; if(!v) return;
+    if(e.state.sos){ show(v, true); sosNoPush = true; try{ $("h_sos").onclick(); }finally{ sosNoPush = false; } return; }   // 앞으로 가기로 5분 버티기 칸에 닿으면 창을 다시 열고 그 칸은 그대로 둔다
     if(st.start && v === "setup") v = "home";                              // 시작한 뒤에는 설정 화면으로 돌아가지 않는다
     else if(!st.start && ["start","setup","help","pro"].indexOf(v) < 0) v = "start";   // 시작 전에는 목표가 필요 없는 화면(시작·설정·도움·상담자 요약)까지만
     show(v, true);
@@ -1101,7 +1102,7 @@ html.big body{zoom:1.18;}
   $("h_sos").onclick = function(ev){
     var deadline = Date.now() + 300000, ti = 0, lastTip = -1;
     if(!$("sos").classList.contains("on")) sosOpener = (ev && ev.currentTarget) || document.activeElement;
-    if(!$("sos").classList.contains("on")){ try{ history.pushState({v: navCur, sos: 1}, ""); }catch(er){} }
+    if(!sosNoPush && !$("sos").classList.contains("on")){ try{ history.pushState({v: navCur, sos: 1}, ""); }catch(er){} }
     $("sos").classList.add("on"); $("sos_card").focus();
     function step(){   // 남은 시간은 끝나는 시각에서 계산 — 화면이 꺼졌다 켜져도 실제 시간과 맞는다
       var left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
