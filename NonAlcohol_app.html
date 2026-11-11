@@ -186,7 +186,8 @@ html.big body{zoom:1.18;}
 .help .ic svg{width:24px;height:24px;}
 .help b{display:block;font-size:1rem;}
 .help span{font-size:0.8438rem;color:var(--d3);}
-.help .go{margin-left:auto;color:var(--d3);font-weight:900;}
+.help .go{margin-left:auto;color:var(--d3);font-weight:900;flex:none;}
+.help a>div{min-width:0;overflow-wrap:anywhere;}   /* 글자 200%에서 긴 안내 줄이 화살표를 밀어 넘치지 않게 (QA #26) */
 .disc{font-size:0.875rem;color:var(--d3);text-align:center;line-height:1.5;margin-top:8px;}
 
 /* 하단 탭 */
