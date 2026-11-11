@@ -20,6 +20,20 @@ const state = () => ({
 const PID = "P-test0001";
 const NOW = at(2026, 11, 6, 12);
 
+test("용량으로 고르는 술(병·500cc)도 코드와 알코올 g 이 채워진다 (Codex PR #34)", () => {
+  const st = state(); st.logs = [
+    { v: 1, t: at(2026, 11, 5, 21, 0), kind: "drink", cups: 2, bev: "소주(병)", lv: "보통", mood: null, trig: [], cope: [] },
+    { v: 1, t: at(2026, 11, 5, 22, 0), kind: "drink", cups: 1, bev: "맥주(500cc)", lv: "보통", mood: null, trig: [], cope: [] },
+    { v: 1, t: at(2026, 11, 5, 22, 30), kind: "drink", cups: 1, bev: "와인(병)", lv: "보통", mood: null, trig: [], cope: [] },
+    { v: 1, t: at(2026, 11, 5, 23, 0), kind: "drink", cups: 1, bev: "막걸리(병)", lv: "보통", mood: null, trig: [], cope: [] }];
+  const rows = R.buildRecords(st, PID), H = rows[0], col = (r, n) => r[H.indexOf(n)];
+  assert.deepEqual(rows.slice(1).map((r) => col(r, "beverage")), [6, 7, 8, 9]);
+  assert.deepEqual(rows.slice(1).map((r) => col(r, "alcohol_g_est")), [96.6, 17.8, 71, 35.5]);   // ml × 도수% × 0.789 × 수량 (앱 화면 값과 같음)
+  const d = R.buildDaily(st, PID, at(2026, 11, 6, 9, 0)), DH = d[0], day = d.find((r) => r[1] === "2026-11-05");
+  assert.equal(day[DH.indexOf("alcohol_g_est")], 220.9);                  // 96.6 + 17.8 + 71 + 35.5 — 일별 합계에 들어간다 (빠지지 않음)
+  assert.equal(day[DH.indexOf("n_drinks")], 4);
+});
+
 test("기록은 시간순 한 줄씩, 모두 숫자 코드로 바뀐다", () => {
   const rows = R.buildRecords(state(), PID), H = rows[0], col = (r, n) => r[H.indexOf(n)];
   assert.equal(rows.length, 4);
@@ -309,7 +323,7 @@ test("서비스워커: 설정 요청이 오류 응답(5xx)이어도 꺼진 설�
 test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, 캐시 이름이 v20 로 올랐다", async () => {
   const sw = loadSw({ cached: { "/vendor/qrcodejs-1.0.0.min.js": 1 } });
   const { res } = await sw.run("/vendor/qrcodejs-1.0.0.min.js"); assert.equal(res.from, "cache"); assert.equal(sw.fetched.length, 0, "캐시에 있으면 네트워크를 부르지 않음");
-  assert.match(sw.src, /const CACHE="nonalcohol-v20"/);
+  assert.match(sw.src, /const CACHE="nonalcohol-v21"/);
 });
 
 // ── 올리는 중에 또 바뀐 기록은 빠지지 않는다 (Codex P2) ───────────────────────────────────────

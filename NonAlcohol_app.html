@@ -512,7 +512,9 @@ html.big body{zoom:1.18;}
   var CR = ["0","1","2","3","4","5","6","7","8","9","10"];
   function lvOfCr(n){ return n <= 3 ? LV[0] : (n <= 6 ? LV[1] : LV[2]); }
   // 술 종류별 대표 1회 분량(ml)·도수(%) — 알코올 g = ml × 도수% × 0.789(에탄올 밀도). 음료마다 달라 「대략」이며 기준·권고량이 아니다
-  var BEV = [{k:"소주", u:"잔", ml:50, abv:17}, {k:"맥주", u:"캔", ml:355, abv:4.5}, {k:"와인", u:"잔", ml:150, abv:12}, {k:"막걸리", u:"잔", ml:200, abv:6}, {k:"양주", u:"잔", ml:30, abv:40}];
+  var BEV = [{k:"소주", u:"잔", ml:50, abv:17}, {k:"맥주", u:"캔", ml:355, abv:4.5}, {k:"와인", u:"잔", ml:150, abv:12}, {k:"막걸리", u:"잔", ml:200, abv:6}, {k:"양주", u:"잔", ml:30, abv:40},
+    /* 용량으로 고르는 것 — 같은 계산식, 저장은 bev 이름 그대로라 .db·내보내기·합치기가 바뀌지 않는다 (이슈 #13 ①). 병·잔 크기는 대표값이다 */
+    {k:"소주(병)", u:"병", ml:360, abv:17}, {k:"맥주(500cc)", u:"잔", ml:500, abv:4.5}, {k:"와인(병)", u:"병", ml:750, abv:12}, {k:"막걸리(병)", u:"병", ml:750, abv:6}];
   function bevOf(k){ for(var i = 0; i < BEV.length; i++) if(BEV[i].k === k) return BEV[i]; return null; }
   // 술 종류마다 1잔의 크기가 달라(소주 50ml · 맥주 355ml …) 잔 수를 더하지 않고 순수 알코올 g 로 합친다. 종류를 모르는 옛 기록은 따로 센다 (PR #7 Codex P2)
   function sumAmt(arr){ var g = 0, unk = 0; arr.forEach(function(l){ if(bevOf(l.bev)) g += gramsOf(l.bev, l.cups||0); else unk++; }); return {g:Math.round(g*10)/10, unk:unk, n:arr.length}; }
