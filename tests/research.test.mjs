@@ -309,7 +309,7 @@ test("서비스워커: 설정 요청이 오류 응답(5xx)이어도 꺼진 설�
 test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, 캐시 이름이 v20 로 올랐다", async () => {
   const sw = loadSw({ cached: { "/vendor/qrcodejs-1.0.0.min.js": 1 } });
   const { res } = await sw.run("/vendor/qrcodejs-1.0.0.min.js"); assert.equal(res.from, "cache"); assert.equal(sw.fetched.length, 0, "캐시에 있으면 네트워크를 부르지 않음");
-  assert.match(sw.src, /const CACHE="nonalcohol-v20"/);
+  assert.match(sw.src, /const CACHE="nonalcohol-v21"/);
 });
 
 // ── 올리는 중에 또 바뀐 기록은 빠지지 않는다 (Codex P2) ───────────────────────────────────────
