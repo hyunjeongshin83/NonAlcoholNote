@@ -1,5 +1,5 @@
 /* 금주노트 서비스워커 — 오프라인에서도 열리도록 캐시 */
-const CACHE="nonalcohol-v21";
+const CACHE="nonalcohol-v22";   // v22: research.js 가 IRB 번호 없이는 켜지지 않게 바뀜 (옛 사본이 오프라인에 남지 않게)
 const ASSETS=["index.html","NonAlcohol_app.html","nadb.js","manifest.webmanifest","icon-192.png","icon-512.png","icon-512-maskable.png","apple-touch-icon.png","favicon-32.png"];
 const own=(req)=>caches.open(CACHE).then(c=>c.match(req));   // 같은 주소의 다른 앱 캐시는 읽지 않는다
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).then(()=>Promise.all(["vendor/sql-wasm.js","vendor/sql-wasm.wasm"].map(u=>c.add(u).catch(()=>{}))))).then(()=>self.skipWaiting()));});

@@ -113,11 +113,15 @@ test("엑셀 파일: zip 구조 · CRC · 시트 4장이 맞다", () => {
 test("꺼짐이 기본값: 설정이 비어 있으면 준비 안 됨, 불완전하면 켤 수 없다", () => {
   delete globalThis.NA_RESEARCH_CONFIG;
   assert.equal(R.config().enabled, false); assert.equal(R.config().ready, false);
-  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "", consentVersion: "v1" };
+  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "", consentVersion: "v1", irb: "IRB-TEST-1" };
   assert.equal(R.config().ready, false, "동의 문구가 없으면 준비 안 됨");
-  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "", consentText: "문구", consentVersion: "v1" };
+  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "", consentText: "문구", consentVersion: "v1", irb: "IRB-TEST-1" };
   assert.equal(R.config().ready, false, "클라이언트 ID 가 없으면 준비 안 됨");
-  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1" };
+  for (const bad of [undefined, "", "   ", null, 123]) {   // IRB 번호가 없거나 공백뿐이거나 글자가 아니면 켜지 못한다 (2026-11-14 대표님 결정)
+    globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1", irb: bad };
+    assert.equal(R.config().ready, false, "IRB 번호가 " + JSON.stringify(bad) + " 이면 준비 안 됨");
+  }
+  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1", irb: "IRB-TEST-1" };
   assert.equal(R.config().ready, true);
   delete globalThis.NA_RESEARCH_CONFIG;
 });
@@ -156,7 +160,7 @@ function fresh({ tokenDelay = 15, listDelay = 0, uploadDelay = 0, deleteDelay = 
   globalThis.google = { accounts: { oauth2: {
     initTokenClient: o => ({ requestAccessToken() { setTimeout(() => o.callback({ access_token: "T", expires_in: 3600 }), tokenDelay); } }),
     revoke(t) { revoked.push(t); } } } };
-  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1" };
+  globalThis.NA_RESEARCH_CONFIG = { enabled: true, clientId: "x".repeat(30), consentText: "문구", consentVersion: "v1", irb: "IRB-TEST-1" };
   const R2 = require("../research.js"); R2.init({ getState: () => { if (hooks.onBuild) hooks.onBuild(store); return hooks.stateFn ? hooks.stateFn() : state(); } });
   return { R: R2, store, calls, raw, revoked, rec, listeners, hooks };
 }
@@ -323,7 +327,7 @@ test("서비스워커: 설정 요청이 오류 응답(5xx)이어도 꺼진 설�
 test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, 캐시 이름이 v20 로 올랐다", async () => {
   const sw = loadSw({ cached: { "/vendor/qrcodejs-1.0.0.min.js": 1 } });
   const { res } = await sw.run("/vendor/qrcodejs-1.0.0.min.js"); assert.equal(res.from, "cache"); assert.equal(sw.fetched.length, 0, "캐시에 있으면 네트워크를 부르지 않음");
-  assert.match(sw.src, /const CACHE="nonalcohol-v21"/);
+  assert.match(sw.src, /const CACHE="nonalcohol-v22"/);
 });
 
 // ── 올리는 중에 또 바뀐 기록은 빠지지 않는다 (Codex P2) ───────────────────────────────────────
