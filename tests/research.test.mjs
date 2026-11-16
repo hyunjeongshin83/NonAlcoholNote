@@ -44,10 +44,27 @@ test("기록은 시간순 한 줄씩, 모두 숫자 코드로 바뀐다", () => 
   assert.equal(col(r, "alcohol_g_est"), 20.1);                      // 50ml × 17% × 0.789 × 3잔
   assert.equal(col(r, "craving_0_10"), 8); assert.equal(col(r, "craving_level"), 3); assert.equal(col(r, "mood"), 3);
   assert.equal(col(r, "trig_stress"), 1); assert.equal(col(r, "trig_gathering"), 1); assert.equal(col(r, "trig_after_work"), 0); assert.equal(col(r, "trig_none"), 0);
-  assert.equal(col(r, "cope_none"), 1); assert.equal(col(r, "cope_hold5"), 0);
+  assert.equal(col(r, "cope_none"), 1); assert.equal(col(r, "cope_hold5"), 0); assert.equal(col(r, "auto_record"), 0);
   const u = rows[2];
   assert.equal(col(u, "kind"), 1); assert.equal(col(u, "cups"), ""); assert.equal(col(u, "beverage"), ""); assert.equal(col(u, "alcohol_g_est"), "");
   assert.equal(R.buildRecords(state(), PID)[2][H.indexOf("cope_walk")], 1);
+});
+
+test("자동 기록 표시(auto_record · 코드북 2): 「5분 버티기」 끝에 앱이 남기는 기록만 1, 사람이 적은 기록은 0", () => {
+  const t = at(2026, 11, 5, 9);
+  // 앱이 5분 버티기를 끝낼 때 남기는 모양 그대로 (NonAlcohol_app.html sos_done)
+  const auto = { v: 1, t, kind: "urge", cups: 0, lv: "보통", mood: null, trig: [], cope: ["5분 버티기"] };
+  // 사람이 적은 기록: 종류·갈망·기분을 꼭 골라야 저장된다 (l_save) — 대처에 「5분 버티기」가 있어도(가져온 파일 등) 자동이 아니다
+  const manual = { v: 1, t: t + 60000, kind: "urge", cups: 0, cr: 8, lv: "강함", mood: "나쁨", trig: ["모임·회식"], cope: ["산책"] };
+  const manualHold5 = { v: 1, t: t + 120000, kind: "urge", cups: 0, cr: 5, lv: "보통", mood: "보통", trig: [], cope: ["5분 버티기"] };
+  const noCope = { v: 1, t: t + 180000, kind: "urge", cups: 0, lv: "보통", mood: null, trig: [], cope: [] };   // 대처가 비어 있으면 자동 기록이 아니다
+  const drink = { v: 1, t: t + 240000, kind: "drink", cups: 2, bev: "소주", cr: 9, lv: "강함", mood: "나쁨", trig: [], cope: [] };
+  const rows = R.buildRecords({ start: t - 86400000, attempts: [], logs: [auto, manual, manualHold5, noCope, drink] }, PID);
+  const H = rows[0], col = (r, n) => r[H.indexOf(n)];
+  assert.equal(H[H.length - 1], "auto_record");   // 기존 열의 자리를 밀지 않는다 — 맨 끝에 붙는다
+  assert.deepEqual(rows.slice(1).map((r) => col(r, "auto_record")), [1, 0, 0, 0, 0]);
+  assert.ok(R.buildCodebook().map((r) => r[0] + ":" + r[1]).includes("records:auto_record"));
+  assert.equal(R.CODEBOOK_VERSION, "2");
 });
 
 test("옛 기록 · 모르는 술 종류는 빈 칸을 숫자로 지어내지 않는다", () => {
@@ -324,10 +341,10 @@ test("서비스워커: 설정 요청이 오류 응답(5xx)이어도 꺼진 설�
   void orig; void sw;
 });
 
-test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, 캐시 이름이 v20 로 올랐다", async () => {
+test("서비스워커: 다른 정적 자산은 그대로 캐시 우선이고, 캐시 이름이 v23 로 올랐다", async () => {
   const sw = loadSw({ cached: { "/vendor/qrcodejs-1.0.0.min.js": 1 } });
   const { res } = await sw.run("/vendor/qrcodejs-1.0.0.min.js"); assert.equal(res.from, "cache"); assert.equal(sw.fetched.length, 0, "캐시에 있으면 네트워크를 부르지 않음");
-  assert.match(sw.src, /const CACHE="nonalcohol-v22"/);
+  assert.match(sw.src, /const CACHE="nonalcohol-v23"/);
 });
 
 // ── 올리는 중에 또 바뀐 기록은 빠지지 않는다 (Codex P2) ───────────────────────────────────────
