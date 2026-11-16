@@ -13,7 +13,7 @@
 })(typeof window !== "undefined" ? window : globalThis, function (root) {
   "use strict";
 
-  var CODEBOOK_VERSION = "1";
+  var CODEBOOK_VERSION = "2";   // 2 (2026-11-16): records 에 auto_record (대표님 결정 · 「5분 버티기」 완료 자동 기록 표시)
   var DAY = 86400000;
   var MAX_DAILY_DAYS = 5000;   // 일별 시트의 최대 날수(약 13년). 넘으면 오래된 날부터 빠지고 codebook 에 적는다 — 기록(records) 시트는 줄이지 않는다
   var STORE_KEY = "nonalcohol.research.v1";
@@ -60,8 +60,15 @@
     var h = ["participant_id", "rec_no", "date", "hour", "weekday", "attempt_no", "day_of_attempt", "kind", "cups", "beverage", "alcohol_g_est", "craving_0_10", "craving_level", "mood"];
     TRIG.forEach(function (t) { h.push(t[0]); }); h.push("trig_none");
     COPE.forEach(function (c) { h.push(c[0]); }); h.push("cope_none");
-    h.push("record_version");
+    h.push("record_version", "auto_record");
     return h;
+  }
+
+  // 「5분 버티기」 끝에 앱이 저절로 남기는 기록인지 — 갈망(0~10)·기분·상황이 비었고 대처에 「5분 버티기」만 붙는 「넘김」이다.
+  // 손으로 기록할 때는 종류·갈망·기분을 꼭 골라야 저장되므로(NonAlcohol_app.html l_save · sos_done) 갈망·기분이 비고 「5분 버티기」가 있으면 자동 기록이다.
+  function isAutoRecord(r) {
+    return r.kind !== "drink" && Array.isArray(r.cope) && has(r.cope, "5분 버티기") && !(isNum(r.cr) && r.cr >= 0 && r.cr <= 10)
+      && MOOD.indexOf(r.mood) < 0 && !(Array.isArray(r.trig) && r.trig.length);
   }
 
   function buildRecords(st, pid) {
@@ -78,7 +85,7 @@
       row.push(any ? 0 : 1);
       COPE.forEach(function (c) { var on = has(cope, c[1]) ? 1 : 0; anyC += on; row.push(on); });
       row.push(anyC ? 0 : 1);
-      row.push(r.v === 1 ? 1 : 1);
+      row.push(r.v === 1 ? 1 : 1, isAutoRecord(r) ? 1 : 0);
       rows.push(row);
     });
     return rows;
@@ -140,6 +147,7 @@
     COPE.forEach(function (c) { s("records", c[0], "넘긴 방법: " + c[1] + " (여러 개 가능)", "1 해당 · 0 아님"); });
     s("records", "cope_none", "넘긴 방법을 하나도 고르지 않음", "1 · 0");
     s("records", "record_version", "앱의 기록 형식", "1");
+    s("records", "auto_record", "「5분 버티기」를 끝내면 앱이 저절로 남기는 기록인가 (갈망 0~10·기분·상황은 사람이 고른 값이 아님). 분석에서는 빼고 본다", "1 자동 · 0 사람이 적음 · 코드북 2 부터 (그 전 파일에는 없음)");
     s("daily", "day_index", "시작일 기준 며칠째", "0 이 시작일. 시작 전은 빈칸");
     s("daily", "n_urges_held · n_drinks", "그날 넘긴 기록 수 · 마신 기록 수", "숫자");
     s("daily", "cups_total · alcohol_g_est", "그날 마신 잔 수 합 · 알코올 대략 g 합(종류를 아는 기록만)", "숫자 · 안 마신 날 잔 수는 빈칸");
