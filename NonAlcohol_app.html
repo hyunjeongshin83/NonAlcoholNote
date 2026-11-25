@@ -931,7 +931,9 @@ html.big body{zoom:1.18;}
   // ── 변화 이유 저울 (NA-1) — 기록(nonalcohol.v1)과 따로 이 기기에만 저장. 백업·내보내기·합치기에 들어가지 않는다
   var BAL_KEY = "nonalcohol.bal.v1", BAL_MAX = 5;
   function balLoad(){
-    try{ var o = JSON.parse(localStorage.getItem(BAL_KEY) || "{}"); return {pro: cleanBal(o.pro), con: cleanBal(o.con)}; }catch(e){ return {pro:[], con:[]}; }
+    var raw = null;
+    try{ raw = localStorage.getItem(BAL_KEY); var o = JSON.parse(raw || "{}"); return {pro: cleanBal(o.pro), con: cleanBal(o.con)}; }
+    catch(e){ try{ if(raw && localStorage.getItem(BAL_KEY + ".corrupt") == null) localStorage.setItem(BAL_KEY + ".corrupt", raw); }catch(e2){} return {pro:[], con:[]}; }   // 읽을 수 없는 값은 덮어쓰기 전에 한 벌 남겨 둔다
   }
   function cleanBal(a){ return Array.isArray(a) ? a.filter(function(x){ return typeof x === "string"; }).map(function(x){ return x.trim().slice(0, 40); }).filter(Boolean).slice(0, BAL_MAX) : []; }
   function balSave(b){ try{ localStorage.setItem(BAL_KEY, JSON.stringify(b)); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
