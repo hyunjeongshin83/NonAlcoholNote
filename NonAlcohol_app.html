@@ -370,7 +370,7 @@ html.big body{zoom:1.18;}
         <div class="fld"><label id="l_trig_lb">어떤 상황이었나요? (여러 개)</label><div class="chips" id="l_trig" role="group" aria-labelledby="l_trig_lb"></div></div>
         <div class="fld" id="l_cope_box"><label id="l_cope_lb">어떻게 넘겼나요? (여러 개)</label><div class="chips" id="l_cope" role="group" aria-labelledby="l_cope_lb"></div></div>
         <button class="btn" id="l_save">기록하기</button>
-        <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div></div>
+        <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div><button type="button" class="btn ghost sm" id="l_tip_help" style="display:none;margin-top:10px">힘들면 도움받기 보기</button></div>
       </div>
     </div>
     <div class="card" id="bal_card">
@@ -796,8 +796,10 @@ html.big body{zoom:1.18;}
     var tip = TIPS[Math.floor(Math.random()*TIPS.length)], el = $("l_tip");
     if(r.kind === "drink"){ $("l_tip_t").textContent = "이번 시도는 계속돼요"; $("l_tip_d").textContent = "적어 주셔서 고마워요. 마신 날도 기록일 뿐이에요. 다음에 비슷한 상황에서는 "+tip.replace(/\.$/,"")+""; }
     else { $("l_tip_t").textContent = "잘 넘기셨어요"; $("l_tip_d").textContent = "다음에 또 당기면 이렇게 해 보세요 — "+tip; }
+    $("l_tip_help").style.display = r.kind === "drink" ? "" : "none";   // 마신 날에만: 다시 시작해도 괜찮고, 도움받기로 이어 줌 (NA-2)
     el.classList.toggle("hi", r.lv === LV[2]); el.classList.add("on");
   }
+  $("l_tip_help").onclick = function(){ show("help"); };
   function renderLogs(){
     if(!st.logs.length){ $("l_list").innerHTML = '<li style="border:none"><div class="empty" style="width:100%">아직 기록이 없어요</div></li>'; return; }
     $("l_list").innerHTML = st.logs.slice(0,30).map(function(l, i){
