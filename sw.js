@@ -1,5 +1,5 @@
 /* 금주노트 서비스워커 — 오프라인에서도 열리도록 캐시 */
-const CACHE="nonalcohol-v23";   // v23: research.js 에 auto_record 칸 (코드북 2) · v22: research.js 가 IRB 번호 없이는 켜지지 않게 바뀜 (옛 사본이 오프라인에 남지 않게)
+const CACHE="nonalcohol-v24";   // v24: 마신 날 기록 뒤 「힘들면 도움받기 보기」 단추 (NA-2) · 서울 25개 자치구 센터 전화 (NA-3) · 변화 이유 저울 카드 (NA-1) · v23: research.js 에 auto_record 칸 (코드북 2) · v22: research.js 가 IRB 번호 없이는 켜지지 않게 바뀜 (옛 사본이 오프라인에 남지 않게)
 const ASSETS=["index.html","NonAlcohol_app.html","nadb.js","manifest.webmanifest","icon-192.png","icon-512.png","icon-512-maskable.png","apple-touch-icon.png","favicon-32.png"];
 const own=(req)=>caches.open(CACHE).then(c=>c.match(req));   // 같은 주소의 다른 앱 캐시는 읽지 않는다
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).then(()=>Promise.all(["vendor/sql-wasm.js","vendor/sql-wasm.wasm"].map(u=>c.add(u).catch(()=>{}))))).then(()=>self.skipWaiting()));});

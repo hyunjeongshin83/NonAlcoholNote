@@ -137,6 +137,12 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .ph-list .body{flex:1;min-width:0;font-size:0.9375rem;color:var(--ink);overflow-wrap:anywhere;}
 .ph-list .meta{font-size:0.8125rem;color:var(--d3);}
 .log .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;min-width:44px;min-height:44px;margin:-8px -6px -8px 0;}   /* 터치 목표 44px (QA #30) */
+.bal-list{list-style:none;margin:6px 0 0;padding:0;}
+.bal-list li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:0.9375rem;color:var(--ink);overflow-wrap:anywhere;}
+.bal-list li span{flex:1;min-width:0;}
+.bal-list .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;min-width:44px;min-height:44px;}
+.bal-add{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;}
+.bal-add input{flex:1 1 9rem;min-width:0;}
 .empty{text-align:center;padding:24px;color:var(--d3);font-size:0.9375rem;background:var(--g0);border-radius:14px;border:1.5px dashed var(--line);}
 .chk{display:flex;align-items:center;gap:10px;font-size:0.9688rem;font-weight:700;color:var(--ink);padding:10px 0;min-height:44px;cursor:pointer;}
 .chk input{width:22px;height:22px;accent-color:var(--g5);flex:none;}
@@ -289,7 +295,7 @@ html.big body{zoom:1.18;}
       <p class="sub">마시고 싶은 순간을 적고, 넘긴 방법을 모아, 약사·상담자와 함께 볼 수 있는 금주·절주 기록장이에요.</p>
     </div>
     <div class="card">
-      <div class="tipcard on" style="margin-top:14px"><div class="t">먼저 알아 두세요</div><div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div></div>
+      <div class="tipcard on" style="margin-top:14px"><div class="t">먼저 알아 두세요</div><div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이거나 경련이 일어나면 바로 진료를 받거나 119에 연락하세요.</div></div>
       <ol class="rank" style="margin-top:12px"><li><span class="n">1</span><div><b style="color:var(--ink)">목표와 평소 술자리를 정해요</b><br><span class="sub">술 끊기·줄이기 중 목표를 고르고, 평소 마신 날 수와 술값을 알려주세요.</span></div></li><li><span class="n">2</span><div><b style="color:var(--ink)">당길 때 5분만 버티고 적어요</b><br><span class="sub">홈의 「지금 술이 당겨요」를 누르면 5분 타이머가 켜지고, 기록은 15초면 끝나요.</span></div></li><li><span class="n">3</span><div><b style="color:var(--ink)">내 패턴을 보고 상담에 가져가요</b><br><span class="sub">통계에서 상황·기분을 보고, 도움 탭의 「약사·상담자와 함께 보기」로 요약을 함께 봐요.</span></div></li></ol>
       <button class="btn" id="st_go" style="margin-top:6px">시작하기</button>
       <a class="btn ghost" href="#pro" data-go="pro" style="margin-top:9px;text-decoration:none;justify-content:center">약사·상담자와 함께 보기</a>
@@ -305,7 +311,7 @@ html.big body{zoom:1.18;}
       <p class="sub">목표와 평소 술자리를 알려주시면 술 없이 지낸 일수와 아낀 돈을 계산해 드려요. 모든 정보는 이 기기에만 저장돼요.</p>
       <div class="tipcard on" style="margin-top:14px">
         <div class="t">먼저 알아 두세요</div>
-        <div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이면 바로 진료를 받거나 119에 연락하세요.</div>
+        <div class="d">오랫동안 많이 마셨다면 갑자기 끊지 말고 먼저 의료진과 상의하세요. 끊은 뒤 손이 떨리거나 식은땀이 나고 몹시 불안하거나 헛것이 보이거나 경련이 일어나면 바로 진료를 받거나 119에 연락하세요.</div>
       </div>
       <div style="margin-top:16px">
         <div class="fld"><label id="s_goal_lb">목표가 무엇인가요?</label><div class="chips" id="s_goal" role="group" aria-labelledby="s_goal_lb"></div></div>
@@ -364,8 +370,14 @@ html.big body{zoom:1.18;}
         <div class="fld"><label id="l_trig_lb">어떤 상황이었나요? (여러 개)</label><div class="chips" id="l_trig" role="group" aria-labelledby="l_trig_lb"></div></div>
         <div class="fld" id="l_cope_box"><label id="l_cope_lb">어떻게 넘겼나요? (여러 개)</label><div class="chips" id="l_cope" role="group" aria-labelledby="l_cope_lb"></div></div>
         <button class="btn" id="l_save">기록하기</button>
-        <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div></div>
+        <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div><button type="button" class="btn ghost sm" id="l_tip_help" style="display:none;margin-top:10px">힘들면 도움받기 보기</button></div>
       </div>
+    </div>
+    <div class="card" id="bal_card">
+      <div class="title" style="font-size:1.375rem">변화 이유 저울</div>
+      <p class="sub">줄이고 싶은 이유와 계속 마시고 싶은 이유를 둘 다 적어 두세요. 정답은 없어요. 이 기기에만 남고, 백업·내보내기 파일에는 들어가지 않아요.</p>
+      <div class="fld" style="margin-top:14px"><label for="bal_pro_in">줄이고 싶은 이유</label><div class="bal-add"><input id="bal_pro_in" maxlength="40" placeholder="예: 아침이 가벼워져요"><button type="button" class="btn ghost sm" id="bal_pro_add">더하기</button></div><ul class="bal-list" id="bal_pro_list"></ul></div>
+      <div class="fld"><label for="bal_con_in">계속 마시고 싶은 이유</label><div class="bal-add"><input id="bal_con_in" maxlength="40" placeholder="예: 퇴근 후 긴장이 풀려요"><button type="button" class="btn ghost sm" id="bal_con_add">더하기</button></div><ul class="bal-list" id="bal_con_list"></ul></div>
     </div>
     <div class="card" id="ph_card">
       <div class="title" style="font-size:1.375rem">사진·바코드로 남기기</div>
@@ -409,9 +421,15 @@ html.big body{zoom:1.18;}
       <a href="https://map.naver.com/p/search/%EC%A0%95%EC%8B%A0%EA%B1%B4%EA%B0%95%EB%B3%B5%EC%A7%80%EC%84%BC%ED%84%B0" target="_blank" rel="noopener"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>가까운 정신건강복지센터 찾기</b><span>정신건강복지센터를 지도에서 찾아요 (누르면 지도 앱·사이트가 열려요)</span></div><span class="go" aria-hidden="true">›</span></a>
       <a href="tel:1577-0199"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>정신건강위기상담전화 1577-0199</b><span>24시간 · 우울·불안·술 문제 상담</span></div><span class="go" aria-hidden="true">›</span></a>
       <a href="tel:109"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>자살예방상담전화 109</b><span>24시간 · 마음이 너무 힘들 때</span></div><span class="go" aria-hidden="true">›</span></a>
-      <a href="tel:119"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>응급 119</b><span>끊은 뒤 심하게 떨리거나 의식이 흐릴 때</span></div><span class="go" aria-hidden="true">›</span></a>
+      <a href="tel:119"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b>응급 119</b><span>끊은 뒤 심하게 떨리거나 경련이 일어나거나 의식이 흐릴 때</span></div><span class="go" aria-hidden="true">›</span></a>
       <a href="#pro" data-go="pro"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-record"/></svg></span><div><b>약사·상담자와 함께 보기</b><span>내 기록을 요약해서 보여 줘요 (이 기기 안에서만 계산해요)</span></div><span class="go" aria-hidden="true">›</span></a>
       <p class="sub" style="margin-top:10px">상담은 해당 기관의 전문 인력이 해요. 이 앱은 연결만 도와요. 가까운 보건소·정신건강복지센터의 알코올 상담과 약국 상담도 이용할 수 있어요.</p>
+    </div>
+    <div class="card help" id="gu_card">
+      <div class="sect">서울에서 가까운 센터 전화</div>
+      <div class="fld"><label for="gu_sel">사는 곳(자치구)</label><select id="gu_sel"><option value="">고르세요</option></select></div>
+      <a id="gu_call" href="#" style="display:none"><span class="ic"><svg aria-hidden="true" focusable="false"><use href="#i-phone"/></svg></span><div><b id="gu_nm"></b><span id="gu_tel"></span></div></a>
+      <p class="sub" style="margin-top:10px;overflow-wrap:anywhere">서울시 25개 자치구 센터 번호예요. 서울시정신건강복지센터(블루터치) 「건강음주희망프로젝트」 안내표를 2026-11-25 에 보고 옮겼고, 번호가 바뀌었을 수 있어요. 연결이 안 되면 정신건강위기상담전화 1577-0199 로 물어보세요. 서울이 아니면 위의 가까운 정신건강복지센터 검색을 써 주세요. 위치는 쓰지 않아요.</p>
     </div>
     <div class="card">
       <div class="sect">내 기록</div>
@@ -683,7 +701,7 @@ html.big body{zoom:1.18;}
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
     if(v === "setup") fillSetup();
     if(v === "start") $("st_go").textContent = st.start ? "메인으로" : "시작하기";
-    if(v === "log"){ renderLogs(); renderMedia(); }
+    if(v === "log"){ renderLogs(); renderMedia(); renderBal(); }
     if(v === "stats") renderStats();
     if(v === "help"){ dbBind(); renderResearch(); }
     if(v === "pro") renderPro();
@@ -784,8 +802,10 @@ html.big body{zoom:1.18;}
     var tip = TIPS[Math.floor(Math.random()*TIPS.length)], el = $("l_tip");
     if(r.kind === "drink"){ $("l_tip_t").textContent = "이번 시도는 계속돼요"; $("l_tip_d").textContent = "적어 주셔서 고마워요. 마신 날도 기록일 뿐이에요. 다음에 비슷한 상황에서는 "+tip.replace(/\.$/,"")+""; }
     else { $("l_tip_t").textContent = "잘 넘기셨어요"; $("l_tip_d").textContent = "다음에 또 당기면 이렇게 해 보세요 — "+tip; }
+    $("l_tip_help").style.display = r.kind === "drink" ? "" : "none";   // 마신 날에만: 다시 시작해도 괜찮고, 도움받기로 이어 줌 (NA-2)
     el.classList.toggle("hi", r.lv === LV[2]); el.classList.add("on");
   }
+  $("l_tip_help").onclick = function(){ show("help"); };
   function renderLogs(){
     if(!st.logs.length){ $("l_list").innerHTML = '<li style="border:none"><div class="empty" style="width:100%">아직 기록이 없어요</div></li>'; return; }
     $("l_list").innerHTML = st.logs.slice(0,30).map(function(l, i){
@@ -914,6 +934,74 @@ html.big body{zoom:1.18;}
     }).catch(function(){ toast("사진을 저장하지 못했어요. 저장 공간을 확인해 주세요"); })
       .then(function(){ phSaving = false; $("ph_save").disabled = false; });
   };
+  // ── 변화 이유 저울 (NA-1) — 기록(nonalcohol.v1)과 따로 이 기기에만 저장. 백업·내보내기·합치기에 들어가지 않는다
+  var BAL_KEY = "nonalcohol.bal.v1", BAL_MAX = 5;
+  function balLoad(){
+    var raw = null;
+    try{ raw = localStorage.getItem(BAL_KEY); var o = JSON.parse(raw || "{}"); return {pro: cleanBal(o.pro), con: cleanBal(o.con)}; }
+    catch(e){ try{ if(raw && localStorage.getItem(BAL_KEY + ".corrupt") == null) localStorage.setItem(BAL_KEY + ".corrupt", raw); }catch(e2){} return {pro:[], con:[]}; }   // 읽을 수 없는 값은 덮어쓰기 전에 한 벌 남겨 둔다
+  }
+  function cleanBal(a){ return Array.isArray(a) ? a.filter(function(x){ return typeof x === "string"; }).map(function(x){ return x.trim().slice(0, 40); }).filter(Boolean).slice(0, BAL_MAX) : []; }
+  function balSave(b){ try{ localStorage.setItem(BAL_KEY, JSON.stringify(b)); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
+  function renderBal(){
+    var b = balLoad();
+    ["pro","con"].forEach(function(side){
+      var ul = $("bal_"+side+"_list"); ul.textContent = "";
+      b[side].forEach(function(t){
+        var li = document.createElement("li"), sp = document.createElement("span"), del = document.createElement("button");
+        sp.textContent = t; del.type = "button"; del.className = "del"; del.textContent = "×"; del.setAttribute("aria-label", "이 이유 지우기: " + t);
+        del.onclick = function(){ var cur = balLoad(), k = cur[side].indexOf(t); if(k >= 0) cur[side].splice(k, 1); if(balSave(cur)){ renderBal(); $("bal_"+side+"_in").focus(); } };   // 번호가 아니라 글자로 찾는다 (다른 탭에서 먼저 지웠어도 엉뚱한 것이 지워지지 않게)
+        li.appendChild(sp); li.appendChild(del); ul.appendChild(li);
+      });
+    });
+  }
+  function balAdd(side){
+    var inp = $("bal_"+side+"_in"), t = inp.value.trim().slice(0, 40); if(!t) return;
+    var cur = balLoad(); if(cur[side].length >= BAL_MAX){ toast("이유는 " + BAL_MAX + "개까지 적을 수 있어요. 하나를 지우고 다시 적어 주세요"); return; }
+    cur[side].push(t); if(balSave(cur)){ inp.value = ""; renderBal(); inp.focus(); }
+  }
+  window.addEventListener("storage", function(e){ if(e.key === BAL_KEY) renderBal(); });   // 다른 탭에서 바뀌면 이 탭 목록도 새로 그린다
+  ["pro","con"].forEach(function(side){
+    $("bal_"+side+"_add").onclick = function(){ balAdd(side); };
+    $("bal_"+side+"_in").addEventListener("keydown", function(e){ if(e.key === "Enter" && !e.isComposing && e.keyCode !== 229){ e.preventDefault(); balAdd(side); } });   // 한글 조합 중 Enter 는 글자 확정이라 건너뛴다
+  });
+  // ── 서울 25개 자치구 센터 전화 (NA-3) — 서울시정신건강복지센터(블루터치) 안내표, 2026-11-25 확인. 번호가 바뀌면 이 표만 고친다. 선택·위치는 저장하거나 보내지 않는다
+  var GU = [
+    ["강남구","정신건강복지센터","02-3423-8794"],
+    ["강동구","정신건강복지센터","02-426-0480"],
+    ["강북구","중독관리통합지원센터","02-989-9223"],
+    ["강서구","정신건강복지센터","02-2600-5926"],
+    ["관악구","정신건강복지센터","02-879-4935"],
+    ["광진구","정신건강복지센터","02-450-1416"],
+    ["구로구","정신건강복지센터","070-4457-5300"],
+    ["금천구","정신건강복지센터","02-3281-9314"],
+    ["노원구","중독관리통합지원센터","02-6941-3677"],
+    ["도봉구","중독관리통합지원센터","02-6082-6793"],
+    ["동대문구","정신건강복지센터","02-963-1621"],
+    ["동작구","정신건강복지센터","02-820-4061"],
+    ["마포구","정신건강복지센터","02-3272-4937"],
+    ["서대문","정신건강복지센터","02-3140-8081"],
+    ["서초구","정신건강복지센터","02-2155-8218"],
+    ["성동구","정신건강복지센터","02-2298-1080"],
+    ["성북구","정신건강복지센터","02-2241-6306"],
+    ["송파구","정신건강복지센터","02-402-5871"],
+    ["양천구","정신건강복지센터","02-2061-8881"],
+    ["영등포구","정신건강복지센터","02-2670-1675"],
+    ["용산구","정신건강복지센터","02-2199-8340"],
+    ["은평구","정신건강복지센터","02-351-8691"],
+    ["종로구","정신건강복지센터","02-745-0199"],
+    ["중구","정신건강복지센터","02-2236-6606"],
+    ["중랑구","정신건강복지센터","02-3422-5921"]
+  ];
+  (function(){
+    var sel = $("gu_sel"); GU.forEach(function(r, i){ var o = document.createElement("option"); o.value = i; o.textContent = r[0]; sel.appendChild(o); });
+    sel.onchange = function(){
+      var a = $("gu_call"), r = GU[+sel.value];
+      if(sel.value === "" || !r){ a.style.display = "none"; return; }
+      a.href = "tel:" + r[2]; a.setAttribute("aria-label", r[0] + " " + r[1] + " " + r[2] + " 전화 걸기");
+      $("gu_nm").textContent = r[0] + " " + r[1]; $("gu_tel").textContent = r[2]; a.style.display = "";
+    };
+  })();
   function renderMedia(){
     var ul = $("ph_list"); ul.textContent = ""; $("ph_more").style.display = st.media.length > phShown ? "" : "none";
     st.media.slice(0, phShown).forEach(function(m){
