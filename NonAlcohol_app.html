@@ -937,10 +937,10 @@ html.big body{zoom:1.18;}
     var b = balLoad();
     ["pro","con"].forEach(function(side){
       var ul = $("bal_"+side+"_list"); ul.textContent = "";
-      b[side].forEach(function(t, i){
+      b[side].forEach(function(t){
         var li = document.createElement("li"), sp = document.createElement("span"), del = document.createElement("button");
         sp.textContent = t; del.type = "button"; del.className = "del"; del.textContent = "×"; del.setAttribute("aria-label", "이 이유 지우기: " + t);
-        del.onclick = function(){ var cur = balLoad(); cur[side].splice(i, 1); if(balSave(cur)){ renderBal(); $("bal_"+side+"_in").focus(); } };
+        del.onclick = function(){ var cur = balLoad(), k = cur[side].indexOf(t); if(k >= 0) cur[side].splice(k, 1); if(balSave(cur)){ renderBal(); $("bal_"+side+"_in").focus(); } };   // 번호가 아니라 글자로 찾는다 (다른 탭에서 먼저 지웠어도 엉뚱한 것이 지워지지 않게)
         li.appendChild(sp); li.appendChild(del); ul.appendChild(li);
       });
     });
@@ -950,9 +950,10 @@ html.big body{zoom:1.18;}
     var cur = balLoad(); if(cur[side].length >= BAL_MAX){ toast("이유는 " + BAL_MAX + "개까지 적을 수 있어요. 하나를 지우고 다시 적어 주세요"); return; }
     cur[side].push(t); if(balSave(cur)){ inp.value = ""; renderBal(); inp.focus(); }
   }
+  window.addEventListener("storage", function(e){ if(e.key === BAL_KEY) renderBal(); });   // 다른 탭에서 바뀌면 이 탭 목록도 새로 그린다
   ["pro","con"].forEach(function(side){
     $("bal_"+side+"_add").onclick = function(){ balAdd(side); };
-    $("bal_"+side+"_in").addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); balAdd(side); } });
+    $("bal_"+side+"_in").addEventListener("keydown", function(e){ if(e.key === "Enter" && !e.isComposing && e.keyCode !== 229){ e.preventDefault(); balAdd(side); } });   // 한글 조합 중 Enter 는 글자 확정이라 건너뛴다
   });
   function renderMedia(){
     var ul = $("ph_list"); ul.textContent = ""; $("ph_more").style.display = st.media.length > phShown ? "" : "none";
