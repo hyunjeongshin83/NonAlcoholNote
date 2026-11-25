@@ -137,6 +137,12 @@ html{scroll-padding-top:calc(var(--header-h) + 8px);scroll-padding-bottom:calc(v
 .ph-list .body{flex:1;min-width:0;font-size:0.9375rem;color:var(--ink);overflow-wrap:anywhere;}
 .ph-list .meta{font-size:0.8125rem;color:var(--d3);}
 .log .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;min-width:44px;min-height:44px;margin:-8px -6px -8px 0;}   /* 터치 목표 44px (QA #30) */
+.bal-list{list-style:none;margin:6px 0 0;padding:0;}
+.bal-list li{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:0.9375rem;color:var(--ink);overflow-wrap:anywhere;}
+.bal-list li span{flex:1;min-width:0;}
+.bal-list .del{color:var(--d3);cursor:pointer;font-weight:800;background:none;border:none;font-size:1.125rem;min-width:44px;min-height:44px;}
+.bal-add{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;}
+.bal-add input{flex:1 1 9rem;min-width:0;}
 .empty{text-align:center;padding:24px;color:var(--d3);font-size:0.9375rem;background:var(--g0);border-radius:14px;border:1.5px dashed var(--line);}
 .chk{display:flex;align-items:center;gap:10px;font-size:0.9688rem;font-weight:700;color:var(--ink);padding:10px 0;min-height:44px;cursor:pointer;}
 .chk input{width:22px;height:22px;accent-color:var(--g5);flex:none;}
@@ -366,6 +372,12 @@ html.big body{zoom:1.18;}
         <button class="btn" id="l_save">기록하기</button>
         <div class="tipcard" id="l_tip"><div class="t" id="l_tip_t"></div><div class="d" id="l_tip_d"></div></div>
       </div>
+    </div>
+    <div class="card" id="bal_card">
+      <div class="title" style="font-size:1.375rem">변화 이유 저울</div>
+      <p class="sub">줄이고 싶은 이유와 계속 마시고 싶은 이유를 둘 다 적어 두세요. 정답은 없어요. 이 기기에만 남고, 백업·내보내기 파일에는 들어가지 않아요.</p>
+      <div class="fld" style="margin-top:14px"><label for="bal_pro_in">줄이고 싶은 이유</label><div class="bal-add"><input id="bal_pro_in" maxlength="40" placeholder="예: 아침이 가벼워져요"><button type="button" class="btn ghost sm" id="bal_pro_add">더하기</button></div><ul class="bal-list" id="bal_pro_list"></ul></div>
+      <div class="fld"><label for="bal_con_in">계속 마시고 싶은 이유</label><div class="bal-add"><input id="bal_con_in" maxlength="40" placeholder="예: 퇴근 후 긴장이 풀려요"><button type="button" class="btn ghost sm" id="bal_con_add">더하기</button></div><ul class="bal-list" id="bal_con_list"></ul></div>
     </div>
     <div class="card" id="ph_card">
       <div class="title" style="font-size:1.375rem">사진·바코드로 남기기</div>
@@ -683,7 +695,7 @@ html.big body{zoom:1.18;}
     document.querySelectorAll("#tabs button").forEach(function(b){ b.classList.toggle("on", b.dataset.v === v); });
     if(v === "setup") fillSetup();
     if(v === "start") $("st_go").textContent = st.start ? "메인으로" : "시작하기";
-    if(v === "log"){ renderLogs(); renderMedia(); }
+    if(v === "log"){ renderLogs(); renderMedia(); renderBal(); }
     if(v === "stats") renderStats();
     if(v === "help"){ dbBind(); renderResearch(); }
     if(v === "pro") renderPro();
@@ -914,6 +926,34 @@ html.big body{zoom:1.18;}
     }).catch(function(){ toast("사진을 저장하지 못했어요. 저장 공간을 확인해 주세요"); })
       .then(function(){ phSaving = false; $("ph_save").disabled = false; });
   };
+  // ── 변화 이유 저울 (NA-1) — 기록(nonalcohol.v1)과 따로 이 기기에만 저장. 백업·내보내기·합치기에 들어가지 않는다
+  var BAL_KEY = "nonalcohol.bal.v1", BAL_MAX = 5;
+  function balLoad(){
+    try{ var o = JSON.parse(localStorage.getItem(BAL_KEY) || "{}"); return {pro: cleanBal(o.pro), con: cleanBal(o.con)}; }catch(e){ return {pro:[], con:[]}; }
+  }
+  function cleanBal(a){ return Array.isArray(a) ? a.filter(function(x){ return typeof x === "string"; }).map(function(x){ return x.trim().slice(0, 40); }).filter(Boolean).slice(0, BAL_MAX) : []; }
+  function balSave(b){ try{ localStorage.setItem(BAL_KEY, JSON.stringify(b)); return true; }catch(e){ toast("저장하지 못했어요. 저장 공간을 확인해 주세요"); return false; } }
+  function renderBal(){
+    var b = balLoad();
+    ["pro","con"].forEach(function(side){
+      var ul = $("bal_"+side+"_list"); ul.textContent = "";
+      b[side].forEach(function(t, i){
+        var li = document.createElement("li"), sp = document.createElement("span"), del = document.createElement("button");
+        sp.textContent = t; del.type = "button"; del.className = "del"; del.textContent = "×"; del.setAttribute("aria-label", "이 이유 지우기: " + t);
+        del.onclick = function(){ var cur = balLoad(); cur[side].splice(i, 1); if(balSave(cur)){ renderBal(); $("bal_"+side+"_in").focus(); } };
+        li.appendChild(sp); li.appendChild(del); ul.appendChild(li);
+      });
+    });
+  }
+  function balAdd(side){
+    var inp = $("bal_"+side+"_in"), t = inp.value.trim().slice(0, 40); if(!t) return;
+    var cur = balLoad(); if(cur[side].length >= BAL_MAX){ toast("이유는 " + BAL_MAX + "개까지 적을 수 있어요. 하나를 지우고 다시 적어 주세요"); return; }
+    cur[side].push(t); if(balSave(cur)){ inp.value = ""; renderBal(); inp.focus(); }
+  }
+  ["pro","con"].forEach(function(side){
+    $("bal_"+side+"_add").onclick = function(){ balAdd(side); };
+    $("bal_"+side+"_in").addEventListener("keydown", function(e){ if(e.key === "Enter"){ e.preventDefault(); balAdd(side); } });
+  });
   function renderMedia(){
     var ul = $("ph_list"); ul.textContent = ""; $("ph_more").style.display = st.media.length > phShown ? "" : "none";
     st.media.slice(0, phShown).forEach(function(m){
